@@ -8,7 +8,7 @@ export type TSidebarItem = {
 
 export const SIDEBAR_INTRO = (): TSidebarItem[] => [
     {
-        label: localize('Welcome to FrostyDBot!'),
+        label: localize('Welcome to Index Navigator!'),
         content: [
             {
                 data: localize(
@@ -21,14 +21,14 @@ export const SIDEBAR_INTRO = (): TSidebarItem[] => [
     },
     {
         label: localize('Guide'),
-        content: [{ data: localize('FrostyDBot - your automated trading partner') }],
+        content: [{ data: localize('Index Navigator - your automated trading partner') }],
         link: true,
     },
     {
         label: localize('FAQs'),
         content: [
             {
-                data: localize('What is FrostyDBot?'),
+                data: localize('What is Index Navigator?'),
                 faq_id: 'faq-0',
             },
             {

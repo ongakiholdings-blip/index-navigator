@@ -1,5 +1,5 @@
 {
-    "brand_name": "FROSTYDBOT",
+    "brand_name": "INDEX NAVIGATOR",
     "brand_domain": "indexnavigator.site",
     "brand_hostname": {
         "staging": "staging.frostydbot.site",
@@ -79,7 +79,7 @@
         "css_variable_prefix": "--brand"
     },
     "platform": {
-        "name": "FROSTYDBOT",
+        "name": "INDEX NAVIGATOR",
         "footer": {
             "enable_language_settings": false,
             "enable_theme_toggle": true
