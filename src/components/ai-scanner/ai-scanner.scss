@@ -904,3 +904,122 @@
 @keyframes ai-spin {
     to { transform: rotate(360deg); }
 }
+
+// ─── Index Navigator widget theme ─────────────────────────────────────────────
+.ai-scanner-trigger {
+    background: linear-gradient(135deg, #20d4d4 0%, #d6b35a 100%);
+    border-color: #20d4d4;
+    color: #0f172a;
+
+    span {
+        color: #0f172a;
+        text-shadow: 0 1px 2px rgb(255 255 255 / 45%);
+    }
+
+    &:hover,
+    &--active {
+        border-color: #d6b35a;
+        box-shadow: 0 8px 28px rgb(0 0 0 / 35%), 0 0 30px rgb(32 212 212 / 55%);
+    }
+
+    &__dot {
+        border-color: #d6b35a;
+    }
+}
+
+.ai-scanner-modal {
+    background: linear-gradient(145deg, #20d4d4 0%, #d6b35a 100%);
+    border-color: rgb(32 212 212 / 70%);
+    color: #0f172a;
+    box-shadow: 0 0 0 1px rgb(214 179 90 / 25%), 0 24px 64px rgb(0 0 0 / 45%);
+
+    &__header {
+        background: linear-gradient(110deg, rgb(32 212 212 / 72%), rgb(214 179 90 / 72%));
+        border-bottom-color: rgb(15 23 42 / 20%);
+
+        h3 {
+            background: none;
+            -webkit-text-fill-color: #0f172a;
+            color: #0f172a;
+            text-shadow: 0 1px 2px rgb(255 255 255 / 40%);
+        }
+    }
+
+    &__close {
+        border-color: rgb(15 23 42 / 35%);
+        background: rgb(255 255 255 / 30%);
+        color: #0f172a;
+
+        &:hover {
+            background: rgb(255 255 255 / 50%);
+            color: #0f172a;
+            border-color: #0f172a;
+        }
+    }
+
+    &__mode-bar,
+    &__description {
+        background: rgb(255 255 255 / 25%);
+    }
+
+    &__mode-btn {
+        border-color: rgb(15 23 42 / 30%);
+        color: rgb(15 23 42 / 75%);
+
+        &:hover:not(:disabled) {
+            background: rgb(255 255 255 / 35%);
+            color: #0f172a;
+            border-color: #0f172a;
+        }
+
+        &--active,
+        &--evenodd#{&}--active {
+            background: rgb(255 255 255 / 55%);
+            border-color: #0f172a;
+            color: #0f172a;
+            box-shadow: 0 2px 10px rgb(15 23 42 / 20%);
+        }
+    }
+
+    &__description,
+    &__description strong,
+    &__source-badge,
+    &__field-value--prediction,
+    &__field-value--rate {
+        color: #0f172a !important;
+    }
+
+    &__best-card {
+        background: rgb(255 255 255 / 25%);
+        border-color: rgb(15 23 42 / 25%);
+
+        &--active {
+            background: rgb(255 255 255 / 35%);
+            border-color: rgb(15 23 42 / 55%);
+        }
+    }
+
+    &__btn {
+        color: #0f172a !important;
+
+        &--scan,
+        &--success {
+            background: linear-gradient(110deg, #20d4d4 0%, #d6b35a 100%) !important;
+            color: #0f172a !important;
+            box-shadow: 0 2px 14px rgb(15 23 42 / 25%);
+        }
+
+        &--primary,
+        &--secondary {
+            background: rgb(255 255 255 / 30%);
+            color: #0f172a;
+            border-color: rgb(15 23 42 / 35%);
+        }
+    }
+}
+
+.ai-scanner-spinner {
+    border-color: rgb(15 23 42 / 25%);
+    border-top-color: #0f172a;
+    box-shadow: 0 0 6px rgb(214 179 90 / 45%);
+}

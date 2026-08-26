@@ -137,30 +137,23 @@ const AppHeader = observer(() => {
             // Show account switcher and logout when user is fully authenticated
             if (activeLoginid && !is_account_regenerating) {
                 if (position === 'left' && !isDesktop) {
-                    // For mobile left section - only account switcher
-                    return (
-                        <div className='auth-actions'>
-                            <div className='account-info'>
-                                <AccountSwitcher activeAccount={activeAccount} />
-                            </div>
-                        </div>
-                    );
+                    // Keep mobile account controls together on the right, after Transfer.
+                    return null;
                 } else if (position === 'right') {
-                    // For right section - transfer button (and account switcher on desktop)
+                    // Transfer appears first, followed by the balance/account panel.
                     return (
                         <div className='auth-actions'>
-                            {isDesktop && (
-                                <div className='account-info'>
-                                    <AccountSwitcher activeAccount={activeAccount} />
-                                </div>
-                            )}
                             <Button
+                                className='auth-actions__transfer-btn'
                                 primary
                                 disabled={client?.is_logging_out || !authData?.currency}
                                 onClick={handleTransfer}
                             >
                                 <Localize i18n_default_text='Transfer' />
                             </Button>
+                            <div className='account-info'>
+                                <AccountSwitcher activeAccount={activeAccount} />
+                            </div>
                         </div>
                     );
                 }

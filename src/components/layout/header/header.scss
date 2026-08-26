@@ -276,6 +276,7 @@
 
 .auth-actions {
     display: flex;
+    flex-wrap: nowrap;
     padding-block: 8px;
     align-items: center;
 
@@ -289,6 +290,45 @@
         &:disabled,
         &[disabled] {
             opacity: 1;
+        }
+
+        &__transfer-btn {
+            background: linear-gradient(110deg, #20d4d4 0%, #d6b35a 100%) !important;
+            border: 1px solid rgb(15 23 42 / 25%) !important;
+            color: #0f172a !important;
+            font-weight: 800 !important;
+            box-shadow: 0 2px 10px rgb(15 23 42 / 20%);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+            &:hover:not(:disabled) {
+                background: linear-gradient(110deg, #49e5e5 0%, #ecd18a 100%) !important;
+                box-shadow: 0 4px 14px rgb(15 23 42 / 28%);
+                transform: translateY(-1px);
+            }
+
+            &:disabled {
+                background: linear-gradient(110deg, rgb(32 212 212 / 50%), rgb(214 179 90 / 50%)) !important;
+                color: rgb(15 23 42 / 55%) !important;
+            }
+        }
+
+        @include mobile-or-tablet-screen {
+            gap: 0.4rem;
+            padding-inline-end: 0.4rem;
+
+            button {
+                margin-inline-end: 0;
+            }
+
+            &__transfer-btn {
+                flex: 0 0 auto;
+                padding-inline: 0.9rem;
+            }
+
+            .account-info {
+                flex: 0 1 auto;
+                min-width: 0;
+            }
         }
     }
 
