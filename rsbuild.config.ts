@@ -4,6 +4,7 @@ import { pluginReact } from '@rsbuild/plugin-react';
 import { pluginSass } from '@rsbuild/plugin-sass';
 
 const isStaticBuild = process.env.NEXT_PUBLIC_APP_BUILD === 'true';
+const derivAppId = process.env.NEXT_PUBLIC_DERIV_APP_ID ?? '34dW9DIkkb8AWcPRK27Mh';
 
 // Resolve smartcharts from wherever the package actually lives so the asset
 // copy works both standalone and inside the monorepo (npm workspaces hoist the
@@ -38,7 +39,7 @@ export default defineConfig({
         // Deriv app id — drives OAuth login/sign-up and WebSocket connections. The
         // preview pipeline sets this from BOT_APP_ID (see scripts/build-previews.js);
         // sibling templates use the same name.
-        NEXT_PUBLIC_DERIV_APP_ID: JSON.stringify(process.env.NEXT_PUBLIC_DERIV_APP_ID ?? ''),
+        NEXT_PUBLIC_DERIV_APP_ID: JSON.stringify(derivAppId),
         // Authoritative environment signal. The bot's URL resolver (config.ts) and
         // the vendored deriv-core OAuth resolver both read this so endpoints stay consistent
         // on a deployed partner domain (where hostname detection can't match Deriv).
