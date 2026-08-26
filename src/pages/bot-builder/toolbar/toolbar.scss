@@ -54,26 +54,17 @@
         background-color: var(--button-primary-default) !important;
 
         &--start {
-            background: linear-gradient(
-                90deg,
-                #003060 0%,
-                #0369a1 20%,
-                #06b6d4 45%,
-                #7dd3fc 55%,
-                #06b6d4 70%,
-                #0369a1 85%,
-                #003060 100%
-            ) !important;
+            background: linear-gradient(110deg, #20d4d4 0%, #d6b35a 100%) !important;
             background-size: 200% auto !important;
             animation: qs-blue-shimmer 2.5s linear infinite, qs-blue-pulse 2s ease-in-out infinite !important;
             border: none !important;
-            color: #e0f2fe !important;
+            color: #0f172a !important;
             font-weight: 800 !important;
             text-shadow: 0 1px 2px rgb(6 182 212 / 40%);
             position: relative;
             overflow: hidden;
 
-            svg path { fill: #e0f2fe !important; }
+            svg path { fill: #0f172a !important; }
 
             &::after {
                 content: '';
@@ -91,18 +82,9 @@
             }
 
             &:hover {
-                background: linear-gradient(
-                    90deg,
-                    #004080 0%,
-                    #0284c7 20%,
-                    #22d3ee 45%,
-                    #a5f3fc 55%,
-                    #22d3ee 70%,
-                    #0284c7 85%,
-                    #004080 100%
-                ) !important;
+                background: linear-gradient(110deg, #49e5e5 0%, #ecd18a 100%) !important;
                 background-size: 200% auto !important;
-                color: #f0f9ff !important;
+                color: #0f172a !important;
             }
         }
 
