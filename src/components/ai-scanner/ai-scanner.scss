@@ -913,6 +913,8 @@
 
     span {
         color: #0f172a;
+        font-style: italic;
+        font-weight: 900;
         text-shadow: 0 1px 2px rgb(255 255 255 / 45%);
     }
 
@@ -931,7 +933,28 @@
     background: linear-gradient(145deg, #20d4d4 0%, #d6b35a 100%);
     border-color: rgb(32 212 212 / 70%);
     color: #0f172a;
+    font-style: italic;
+    font-weight: 700;
     box-shadow: 0 0 0 1px rgb(214 179 90 / 25%), 0 24px 64px rgb(0 0 0 / 45%);
+
+    // Keep all widget copy readable over the bright gradient.
+    p,
+    span,
+    strong,
+    label,
+    div,
+    button {
+        color: #0f172a !important;
+        font-style: italic;
+        font-weight: 700;
+    }
+
+    input,
+    select,
+    option {
+        color: #0f172a !important;
+        font-weight: 700;
+    }
 
     &__header {
         background: linear-gradient(110deg, rgb(32 212 212 / 72%), rgb(214 179 90 / 72%));
@@ -941,6 +964,8 @@
             background: none;
             -webkit-text-fill-color: #0f172a;
             color: #0f172a;
+            font-style: italic;
+            font-weight: 900;
             text-shadow: 0 1px 2px rgb(255 255 255 / 40%);
         }
     }
@@ -965,6 +990,8 @@
     &__mode-btn {
         border-color: rgb(15 23 42 / 30%);
         color: rgb(15 23 42 / 75%);
+        font-style: italic;
+        font-weight: 800;
 
         &:hover:not(:disabled) {
             background: rgb(255 255 255 / 35%);
@@ -1001,6 +1028,8 @@
 
     &__btn {
         color: #0f172a !important;
+        font-style: italic;
+        font-weight: 800;
 
         &--scan,
         &--success {
