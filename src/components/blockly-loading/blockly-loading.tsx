@@ -1,5 +1,4 @@
 import { observer } from 'mobx-react-lite';
-import EpicLoader from '@/components/loader/epic-loader';
 import { useStore } from '@/hooks/useStore';
 
 const BlocklyLoading = observer(() => {
@@ -8,7 +7,7 @@ const BlocklyLoading = observer(() => {
 
     if (!is_loading) return null;
 
-    return <EpicLoader />;
+    return null;
 });
 
 export default BlocklyLoading;

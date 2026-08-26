@@ -17,7 +17,7 @@ const smartchartsDist = path.join(
 // Keep builds green when the Deriv OAuth app id is not configured in CI or
 // local development. The app can still build and render with login disabled,
 // and the value can be supplied later in the hosting provider's env vars.
-if (!process.env.NEXT_PUBLIC_DERIV_APP_ID) {
+if (!derivAppId) {
   // eslint-disable-next-line no-console
   console.warn(
     '\n⚠️  NEXT_PUBLIC_DERIV_APP_ID is not set — Log in / Sign up will be disabled.\n'

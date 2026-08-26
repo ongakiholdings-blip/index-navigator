@@ -4,7 +4,6 @@ import { ToastContainer } from 'react-toastify';
 import AuthLoadingWrapper from '@/components/auth-loading-wrapper';
 import { botNotification } from '@/components/bot-notification/bot-notification';
 import useLiveChat from '@/components/chat/useLiveChat';
-import EpicLoader from '@/components/loader/epic-loader';
 import { getUrlBase } from '@/components/shared';
 import TransactionDetailsModal from '@/components/transaction-details';
 import { api_base, ApiHelpers, ServerTime } from '@/external/bot-skeleton';
@@ -36,6 +35,7 @@ const PreviewBranding =
 const AppContent = observer(() => {
     const [is_api_initialized, setIsApiInitialized] = React.useState(false);
     const [is_loading, setIsLoading] = React.useState(true);
+    const [engine_stores_ready, setEngineStoresReady] = React.useState(false);
 
     const store = useStore();
     const { app, transactions, common, client } = store;
@@ -136,6 +136,13 @@ const AppContent = observer(() => {
         });
     };
 
+    React.useEffect(() => {
+        if (!engine_stores_ready) {
+            init();
+            setEngineStoresReady(true);
+        }
+    }, [engine_stores_ready]);
+
     const changeActiveSymbolLoadingState = () => {
         init();
 
@@ -179,7 +186,7 @@ const AppContent = observer(() => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [is_api_initialized, client.loginid]);
 
-    if (common?.error) return null;
+    if (common?.error || !engine_stores_ready) return null;
 
     return (
         <React.Fragment>
@@ -188,23 +195,19 @@ const AppContent = observer(() => {
                     <PreviewBranding />
                 </Suspense>
             )}
-            {is_loading ? (
-                <EpicLoader />
-            ) : (
-                <AuthLoadingWrapper>
-                    <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
-                        <BlocklyLoading />
-                        <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
-                            <Audio />
-                            <Main />
-                            <BotBuilder />
-                            <BotStopped />
-                            <TransactionDetailsModal />
-                            <ToastContainer limit={3} draggable={false} />
-                        </div>
-                    </ThemeProvider>
-                </AuthLoadingWrapper>
-            )}
+            <AuthLoadingWrapper>
+                <ThemeProvider theme={is_dark_mode_on ? 'dark' : 'light'}>
+                    <BlocklyLoading />
+                    <div className='bot-dashboard bot' data-testid='dt_bot_dashboard'>
+                        <Audio />
+                        <Main />
+                        <BotBuilder />
+                        <BotStopped />
+                        <TransactionDetailsModal />
+                        <ToastContainer limit={3} draggable={false} />
+                    </div>
+                </ThemeProvider>
+            </AuthLoadingWrapper>
         </React.Fragment>
     );
 });
