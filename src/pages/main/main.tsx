@@ -53,7 +53,6 @@ import OverUnderEngine from '@/components/over-under-engine';
 import AnalysisTools from '../analysis';
 import CopyTrading from '../copy-trading';
 import DigitMatcher from '@/components/digit-matcher';
-import TradeAssistant from '../trade-assistant';
 import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
@@ -90,7 +89,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'd_circles', 'digit_matcher', 'analysis_tool', 'market_analyzer', 'chart', 'trading_view', 'copy_trading', 'trade_assistant', 'analysis', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'd_circles', 'digit_matcher', 'analysis_tool', 'market_analyzer', 'chart', 'trading_view', 'copy_trading', 'analysis', 'tutorial'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -516,21 +515,6 @@ const AppWrapper = observer(() => {
                                 id='id-copy-trading'
                             >
                                 <CopyTrading />
-                            </div>
-                            <div
-                                label={
-                                    <>
-                                        <LabelPairedCopyCaptionRegularIcon
-                                            height='24px'
-                                            width='24px'
-                                            fill='var(--text-general)'
-                                        />
-                                        <Localize i18n_default_text='Trade Assistant' />
-                                    </>
-                                }
-                                id='id-trade-assistant'
-                            >
-                                <TradeAssistant />
                             </div>
                             <div
                                 label={
