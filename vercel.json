@@ -5,7 +5,7 @@
     {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "frostydbot.site" }],
-      "destination": "https://www.frostydbot.site/:path*",
+      "destination": "https://indexnavigator.site/:path*",
       "permanent": true
     }
   ],
