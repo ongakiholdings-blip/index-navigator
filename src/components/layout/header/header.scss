@@ -2,6 +2,14 @@
 @use 'components/shared/styles/mixins' as *;
 
 .app-header {
+    color: #0f172a;
+
+    .deriv-text,
+    button,
+    a {
+        color: #0f172a;
+    }
+
     &__account-settings {
         padding-inline-end: 1.2rem;
         border-inline-end: 0.1rem solid var(--general-section-1);
@@ -12,7 +20,7 @@
     &__menu {
         svg > path,
         svg > g > path {
-            fill: var(--text-prominent);
+            fill: #0f172a;
         }
     }
 }
@@ -93,7 +101,20 @@
     position: sticky;
     top: 0;
     z-index: 1;
-    background: var(--general-main-1);
+    background: linear-gradient(110deg, #20d4d4 0%, #d6b35a 100%);
+    color: #0f172a;
+
+    .deriv-text,
+    button,
+    a {
+        color: #0f172a;
+    }
+
+    [aria-selected='true'],
+    .active {
+        background-color: rgb(255 255 255 / 28%);
+        color: #0f172a;
+    }
 
     .derivs-text__size--md {
         font-size: 14px;
