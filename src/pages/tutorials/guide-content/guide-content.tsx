@@ -28,6 +28,7 @@ type TGuideContent = {
 };
 
 const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: TGuideContent) => {
+    const youtube_channel_url = 'https://www.youtube.com/@index_navigatorke';
     const { isDesktop } = useDevice();
     const { dashboard } = useStore();
     const {
@@ -35,7 +36,6 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
         onCloseDialog: onOkButtonClick,
         setActiveTab,
         setTourDialogVisibility,
-        showVideoDialog,
         setActiveTour,
         setShowMobileTourDialog,
     } = dashboard;
@@ -141,13 +141,14 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                             </div>
 
                             <div className='tutorials-wrap__group__guides'>
-                                {video_tab_content?.map(({ content, src, url, id }) => {
+                                {video_tab_content?.slice(0, 1).map(({ src, id }) => {
                                     return (
                                         <div className='tutorials-wrap__group__cards' key={id}>
-                                            <div
-                                                className={classNames('tutorials-wrap__placeholder', {
-                                                    'tutorials-wrap__placeholder--disabled': !url,
-                                                })}
+                                            <a
+                                                href={youtube_channel_url}
+                                                target='_blank'
+                                                rel='noopener noreferrer'
+                                                className='tutorials-wrap__placeholder'
                                                 style={{
                                                     backgroundImage: `url(${src})`,
                                                 }}
@@ -157,17 +158,9 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                                         className='tutorials-wrap__placeholder__button-group--play'
                                                         width='42px'
                                                         height='42px'
-                                                        onClick={() => {
-                                                            showVideoDialog({
-                                                                type: 'url',
-                                                                url,
-                                                            });
-                                                            /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
-                                                            /* [/AI] */
-                                                        }}
                                                     />
                                                 </div>
-                                            </div>
+                                            </a>
                                             <div className='tutorials-wrap__placeholder__description'>
                                                 <Text
                                                     align='left'
@@ -175,7 +168,7 @@ const GuideContent = ({ guide_tab_content, video_tab_content, is_dialog_open }: 
                                                     lineHeight='s'
                                                     size={isDesktop ? 's' : 'xs'}
                                                 >
-                                                    {content}
+                                                    Index Navigator YouTube Channel
                                                 </Text>
                                             </div>
                                         </div>
