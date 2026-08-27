@@ -1,79 +1,160 @@
-.tutorials-youtube {
+.tutorials-page {
+    display: flex;
+    width: 100%;
+    min-height: calc(100vh - 8rem);
+    background: #fff;
+    color: #172033;
+}
+
+.tutorials-page__sidebar {
+    flex: 0 0 11.5rem;
+    padding: 1.2rem 0.7rem;
+    background: #f1f2f3;
+}
+
+.tutorials-page__search {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 0.45rem;
+    height: 2rem;
+    padding: 0 0.55rem;
+    border: 1px solid #c9cdd2;
+    border-radius: 0.35rem;
+    background: #fff;
+    color: #657080;
+
+    input {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        color: #172033;
+        font-size: 0.72rem;
+    }
+}
+
+.tutorials-page__nav-item {
+    display: block;
     width: 100%;
-    height: 100%;
-    min-height: 60vh;
-    padding: 2.4rem;
+    padding: 0.75rem 0.8rem;
+    border: 0;
+    background: transparent;
+    color: #24324a;
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
 
-    &__card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        max-width: 48rem;
-        padding: 4rem 3.2rem;
-        border-radius: 1.6rem;
-        background: var(--general-section-1);
-        box-shadow: 0 4px 24px rgb(0 0 0 / 18%);
-    }
-
-    &__icon {
-        width: 7.2rem;
-        height: 7.2rem;
-        margin-bottom: 2rem;
-
-        svg {
-            width: 100%;
-            height: 100%;
-        }
-    }
-
-    &__title {
-        font-size: 2.2rem;
+    &--active {
+        background: #d4d4d4;
+        color: #172033;
         font-weight: 700;
-        color: var(--text-prominent);
-        margin: 0 0 1.2rem;
+    }
+}
+
+.tutorials-page__content {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+    padding: 2.4rem 1.5rem;
+}
+
+.tutorials-page__empty {
+    padding: 3rem;
+    color: #526078;
+    text-align: center;
+}
+
+.tutorials-wrap {
+    width: 100%;
+    max-width: 60rem;
+    margin: 0 auto;
+    color: #172033;
+
+    &__group {
+        margin-bottom: 2.8rem;
+
+        &__title {
+            margin-bottom: 1rem;
+            color: #172033;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        &__guides {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.4rem 1.6rem;
+        }
+
+        &__cards {
+            flex: 0 1 10.5rem;
+            min-width: 8rem;
+            text-align: center;
+        }
     }
 
-    &__description {
-        font-size: 1.4rem;
-        line-height: 1.7;
-        color: var(--text-general);
-        margin: 0 0 2.8rem;
-
-        strong {
-            color: var(--text-prominent);
-        }
+    &--tour,
+    &__placeholder {
+        position: relative;
+        width: 100%;
+        height: 6.7rem;
+        border-radius: 0.1rem;
+        background-position: center;
+        background-size: cover;
+        cursor: pointer;
     }
 
-    &__button {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.8rem;
-        padding: 1.2rem 2.8rem;
-        border-radius: 0.8rem;
-        background: #ff0000;
-        color: #fff;
-        font-size: 1.4rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: background 0.2s, transform 0.15s;
+    &__placeholder {
+        &__button-group {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: rgb(0 0 0 / 15%);
 
-        svg {
-            width: 2rem;
-            height: 2rem;
-            flex-shrink: 0;
+            &--play {
+                width: 2.6rem;
+                height: 2.6rem;
+                padding: 0.7rem;
+                border-radius: 0.65rem;
+                background: rgb(70 70 70 / 70%);
+                color: #fff;
+            }
         }
 
-        &:hover {
-            background: #cc0000;
-            transform: translateY(-1px);
+        &__tours {
+            height: 6.7rem;
+            background-position: center;
+            background-size: cover;
         }
 
-        &:active {
-            transform: translateY(0);
+        &__description {
+            margin-top: 0.55rem;
+            color: #172033;
+            font-size: 0.75rem;
+            line-height: 1.35;
         }
+    }
+}
+
+@media (max-width: 640px) {
+    .tutorials-page {
+        min-height: calc(100vh - 7rem);
+    }
+
+    .tutorials-page__sidebar {
+        flex-basis: 8.5rem;
+        padding: 0.8rem 0.45rem;
+    }
+
+    .tutorials-page__content {
+        padding: 1.2rem 0.75rem;
+    }
+
+    .tutorials-wrap__group__guides {
+        gap: 1rem;
+    }
+
+    .tutorials-wrap__group__cards {
+        flex-basis: 8.2rem;
     }
 }

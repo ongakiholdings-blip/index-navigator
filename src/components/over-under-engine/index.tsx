@@ -465,6 +465,41 @@ const OverUnderEngine: React.FC = observer(() => {
         // effect can detect when api_base.init() replaces it with a new instance.
         passiveApiRef.current = api_base.api;
 
+        if (resetHistory) {
+            let historyResponse: any;
+            try {
+                historyResponse = await (api_base.api as any).send({
+                    ticks_history: sym,
+                    count: DIGIT_WINDOW,
+                    end: 'latest',
+                    style: 'ticks',
+                });
+            } catch {
+                setStatusMsg('⚠ Unable to load live tick history');
+                return;
+            }
+            const history = historyResponse?.history;
+            const pricesFromHistory = Array.isArray(history?.prices) ? history.prices : [];
+            const historyPipSize = Number(
+                historyResponse?.pip_size ?? history?.pip_size ?? (api_base.api as any).pip_sizes?.[sym]
+            );
+            const historyQuotes = pricesFromHistory
+                .map((quote: number | string) => formatQuote(quote, historyPipSize));
+            const historyDigits = historyQuotes
+                .map((quote: string) => getLastDigit(quote))
+                .filter((digit: number | null): digit is number => digit !== null);
+            const latestHistoryQuote = historyQuotes[historyQuotes.length - 1];
+            const latestHistoryDigit = historyDigits[historyDigits.length - 1];
+            setDigitWindow(historyDigits.slice(-DIGIT_WINDOW));
+            setDigits(historyDigits.slice(-MAX_DIGITS));
+            setPrices(historyQuotes.slice(-MAX_DIGITS));
+            if (latestHistoryQuote !== undefined) {
+                setCurrentDigit(latestHistoryDigit ?? null);
+                latestDigitRef.current = latestHistoryDigit ?? null;
+                lastTickAtRef.current = Date.now();
+            }
+        }
+
         passiveSub.current = (api_base.api as any).onMessage().subscribe((msg: any) => {
             const data = getApiData(msg);
             const tick = data?.msg_type === 'tick' ? data.tick : data?.tick;

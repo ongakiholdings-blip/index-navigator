@@ -257,11 +257,17 @@
 }
 
 .oue .oue__course-digit-percent {
-    font-size: 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 900;
+    line-height: 1;
 }
 
 .oue .oue__course-digit-count {
     font-size: 0.6rem;
+}
+
+.oue .oue__course-digit-percent {
+    font-size: 0.75rem;
 }
 
 @media (max-width: 360px) {
