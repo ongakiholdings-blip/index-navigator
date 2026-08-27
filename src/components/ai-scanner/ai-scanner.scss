@@ -930,6 +930,9 @@
 }
 
 .ai-scanner-modal {
+    width: 30rem;
+    max-height: calc(100vh - 12rem);
+
     background: linear-gradient(145deg, #20d4d4 0%, #d6b35a 100%);
     border-color: rgb(32 212 212 / 70%);
     color: #0f172a;
