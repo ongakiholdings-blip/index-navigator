@@ -168,11 +168,13 @@
 
         &__content {
             display: flex;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: stretch;
             height: var(--tab-content-height);
             flex-grow: 1;
             background: var(--general-main-1);
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
             position: relative;
 
             @include mobile-or-tablet-screen {
@@ -180,7 +182,7 @@
             }
 
             @include desktop-screen {
-                padding: 80px 216px 0;
+                padding: 48px 64px 24px;
             }
 
             @include mobile-or-tablet-screen {
@@ -190,7 +192,7 @@
             }
 
             .quick-panel {
-                flex: 1 1 44%;
+                width: 100%;
             }
 
             .preview-panel {
@@ -515,9 +517,10 @@ body.theme--light {
     /* Dashboard content area */
     .tab__dashboard__content {
         background:
-            radial-gradient(ellipse at 20% 10%, rgb(6 182 212 / 6%) 0%, transparent 45%),
-            radial-gradient(ellipse at 80% 85%, rgb(59 130 246 / 5%) 0%, transparent 45%),
-            var(--general-main-1) !important;
+            linear-gradient(rgb(233 248 248 / 82%), rgb(226 244 244 / 86%)),
+            url('../../assets/dashboard-bg-desktop.jpeg') !important;
+        background-size: cover !important;
+        background-position: center !important;
         position: relative;
 
         &::before {
@@ -702,15 +705,17 @@ body.theme--light {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DARK THEME — deep navy + cyan
+   DARK THEME — Index Navigator teal + gold
    ───────────────────────────────────────────────────────────── */
 body.theme--dark {
 
     .tab__dashboard__content {
         background:
-            radial-gradient(ellipse at 30% 20%, rgb(6 182 212 / 8%) 0%, transparent 55%),
-            radial-gradient(ellipse at 80% 80%, rgb(59 130 246 / 6%) 0%, transparent 50%),
-            var(--general-main-1) !important;
+            radial-gradient(ellipse at 30% 20%, rgb(32 212 212 / 8%) 0%, transparent 55%),
+            linear-gradient(rgb(6 20 20 / 62%), rgb(6 20 20 / 68%)),
+            url('../../assets/dashboard-bg-desktop.jpeg') !important;
+        background-size: cover !important;
+        background-position: center !important;
         position: relative;
 
         &::before {
@@ -718,8 +723,8 @@ body.theme--dark {
             position: absolute;
             inset: 0;
             background-image:
-                linear-gradient(rgb(6 182 212 / 2%) 1px, transparent 1px),
-                linear-gradient(90deg, rgb(59 130 246 / 2%) 1px, transparent 1px);
+                linear-gradient(rgb(32 212 212 / 3%) 1px, transparent 1px),
+                linear-gradient(90deg, rgb(214 179 90 / 3%) 1px, transparent 1px);
             background-size: 48px 48px;
             pointer-events: none;
             z-index: 0;
@@ -732,32 +737,32 @@ body.theme--dark {
         .title {
             background: linear-gradient(
                 90deg,
-                #0369a1 0%, #06b6d4 25%, #e0f2fe 50%, #06b6d4 75%, #0369a1 100%
+                #20d4d4 0%, #8ae9e9 25%, #d6b35a 50%, #8ae9e9 75%, #20d4d4 100%
             );
             background-size: 300% auto;
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
             animation: gold-text-shine 4s linear infinite;
-            filter: drop-shadow(0 0 8px rgb(6 182 212 / 30%));
+            filter: drop-shadow(0 0 8px rgb(32 212 212 / 35%));
             font-weight: 900 !important;
             letter-spacing: 0.02em;
         }
 
         .subtitle {
-            color: rgb(6 182 212 / 55%) !important;
-            font-weight: 500;
-            text-shadow: 0 1px 8px rgb(6 182 212 / 10%);
+            color: #a8dcd8 !important;
+            font-weight: 600;
+            text-shadow: 0 1px 8px rgb(32 212 212 / 15%);
         }
     }
 
     .tab__dashboard__table__images {
-        background: linear-gradient(145deg, rgb(0 30 60 / 70%) 0%, rgb(0 13 31 / 60%) 100%) !important;
-        border: 1.5px solid rgb(6 182 212 / 20%) !important;
+        background: linear-gradient(145deg, rgb(18 42 44 / 85%) 0%, rgb(16 32 34 / 75%) 100%) !important;
+        border: 1.5px solid rgb(32 212 212 / 30%) !important;
         box-shadow:
-            0 0 0 1px rgb(6 182 212 / 5%) inset,
-            0 4px 20px rgb(0 0 0 / 30%),
-            0 0 8px rgb(6 182 212 / 5%) !important;
+            0 0 0 1px rgb(32 212 212 / 8%) inset,
+            0 4px 20px rgb(0 0 0 / 35%),
+            0 0 8px rgb(32 212 212 / 8%) !important;
         border-radius: 1.2rem !important;
         position: relative;
         overflow: hidden;
@@ -770,7 +775,7 @@ body.theme--dark {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(105deg, transparent 35%, rgb(224 242 254 / 6%) 50%, transparent 65%);
+            background: linear-gradient(105deg, transparent 35%, rgb(32 212 212 / 7%) 50%, transparent 65%);
             background-size: 200% 100%;
             animation: dash-cyan-shimmer 3s ease-in-out infinite;
             pointer-events: none;
@@ -779,70 +784,70 @@ body.theme--dark {
 
         &:hover {
             transform: translateY(-4px) scale(1.03) !important;
-            border-color: rgb(6 182 212 / 50%) !important;
+            border-color: rgb(214 179 90 / 60%) !important;
             box-shadow:
-                0 0 0 1px rgb(6 182 212 / 15%) inset,
-                0 8px 32px rgb(0 0 0 / 40%),
-                0 0 16px rgb(6 182 212 / 20%),
-                0 0 32px rgb(59 130 246 / 10%) !important;
+                0 0 0 1px rgb(32 212 212 / 18%) inset,
+                0 8px 32px rgb(0 0 0 / 45%),
+                0 0 16px rgb(32 212 212 / 25%),
+                0 0 32px rgb(214 179 90 / 15%) !important;
             cursor: pointer;
         }
 
         svg {
-            filter: drop-shadow(0 0 4px rgb(6 182 212 / 20%));
+            filter: drop-shadow(0 0 4px rgb(32 212 212 / 25%));
             transition: filter 0.3s ease, transform 0.3s ease;
         }
 
         &:hover svg {
-            filter: drop-shadow(0 0 8px rgb(6 182 212 / 50%)) brightness(1.1);
+            filter: drop-shadow(0 0 8px rgb(214 179 90 / 55%)) brightness(1.1);
             transform: scale(1.08);
         }
     }
 
     .tab__dashboard__table__block {
         .dc-text {
-            color: rgb(6 182 212 / 65%) !important;
-            font-weight: 600 !important;
-            text-shadow: 0 0 6px rgb(6 182 212 / 15%);
+            color: #a8dcd8 !important;
+            font-weight: 700 !important;
+            text-shadow: 0 0 6px rgb(32 212 212 / 18%);
             letter-spacing: 0.03em;
             transition: color 0.2s, text-shadow 0.2s;
         }
 
         &:hover .dc-text {
-            color: #e0f2fe !important;
-            text-shadow: 0 0 10px rgb(6 182 212 / 40%);
+            color: #eafffe !important;
+            text-shadow: 0 0 10px rgb(32 212 212 / 45%);
         }
     }
 
     .announcements__button {
-        background: linear-gradient(135deg, rgb(0 30 60 / 60%) 0%, rgb(0 20 40 / 60%) 100%) !important;
-        border: 1.5px solid rgb(6 182 212 / 25%) !important;
-        box-shadow: 0 0 8px rgb(6 182 212 / 10%) !important;
+        background: linear-gradient(135deg, rgb(18 42 44 / 70%) 0%, rgb(16 32 34 / 70%) 100%) !important;
+        border: 1.5px solid rgb(32 212 212 / 30%) !important;
+        box-shadow: 0 0 8px rgb(32 212 212 / 12%) !important;
         transition: all 0.25s ease !important;
         border-radius: 2.4rem !important;
 
-        svg path { fill: rgb(6 182 212 / 80%) !important; }
-        .dc-text  { color: rgb(6 182 212 / 80%) !important; font-weight: 600 !important; }
+        svg path { fill: #8ae9e9 !important; }
+        .dc-text  { color: #8ae9e9 !important; font-weight: 700 !important; }
 
         &:hover {
-            border-color: rgb(6 182 212 / 55%) !important;
-            box-shadow: 0 0 14px rgb(6 182 212 / 20%) !important;
-            background: linear-gradient(135deg, rgb(0 40 80 / 70%) 0%, rgb(0 30 60 / 70%) 100%) !important;
+            border-color: rgb(214 179 90 / 60%) !important;
+            box-shadow: 0 0 14px rgb(32 212 212 / 25%) !important;
+            background: linear-gradient(135deg, rgb(26 56 58 / 80%) 0%, rgb(20 44 46 / 80%) 100%) !important;
         }
     }
 
     .bot-list {
         &__title .dc-text {
-            color: rgb(6 182 212 / 80%) !important;
-            text-shadow: 0 0 6px rgb(6 182 212 / 20%);
-            font-weight: 700 !important;
+            color: #8ae9e9 !important;
+            text-shadow: 0 0 6px rgb(32 212 212 / 25%);
+            font-weight: 800 !important;
         }
 
         &__header {
-            border-bottom: 1px solid rgb(6 182 212 / 18%) !important;
+            border-bottom: 1px solid rgb(32 212 212 / 22%) !important;
 
             .dc-text {
-                color: rgb(6 182 212 / 55%) !important;
+                color: #a8dcd8 !important;
                 font-weight: 700 !important;
                 letter-spacing: 0.04em;
                 text-transform: uppercase;
@@ -851,43 +856,611 @@ body.theme--dark {
         }
 
         &__item {
-            border-bottom: 1px solid rgb(6 182 212 / 8%) !important;
+            border-bottom: 1px solid rgb(32 212 212 / 10%) !important;
             transition: background 0.2s ease;
 
             &:hover {
-                background: linear-gradient(90deg, rgb(6 182 212 / 4%) 0%, transparent 100%) !important;
+                background: linear-gradient(90deg, rgb(32 212 212 / 6%) 0%, transparent 100%) !important;
             }
 
             &__label .dc-text,
             &__time-stamp .dc-text,
             &__load-type .dc-text {
-                color: rgb(6 182 212 / 55%) !important;
+                color: #a8dcd8 !important;
             }
 
             &__actions button svg {
-                fill: rgb(6 182 212 / 45%) !important;
+                fill: rgb(32 212 212 / 55%) !important;
                 transition: fill 0.2s;
             }
 
             &__actions button:hover svg {
-                fill: rgb(6 182 212 / 90%) !important;
-                filter: drop-shadow(0 0 4px rgb(6 182 212 / 40%));
+                fill: #d6b35a !important;
+                filter: drop-shadow(0 0 4px rgb(214 179 90 / 45%));
             }
         }
     }
 
     .user-guide__button {
-        background: linear-gradient(135deg, rgb(0 30 60 / 60%) 0%, rgb(0 20 40 / 60%) 100%) !important;
-        border: 1.5px solid rgb(6 182 212 / 22%) !important;
-        box-shadow: 0 0 6px rgb(6 182 212 / 8%) !important;
+        background: linear-gradient(135deg, rgb(18 42 44 / 70%) 0%, rgb(16 32 34 / 70%) 100%) !important;
+        border: 1.5px solid rgb(32 212 212 / 28%) !important;
+        box-shadow: 0 0 6px rgb(32 212 212 / 10%) !important;
         transition: all 0.25s ease !important;
 
-        svg      { fill: rgb(6 182 212 / 75%) !important; }
-        .dc-text { color: rgb(6 182 212 / 75%) !important; }
+        svg      { fill: #8ae9e9 !important; }
+        .dc-text { color: #8ae9e9 !important; font-weight: 700 !important; }
 
         &:hover {
-            border-color: rgb(6 182 212 / 50%) !important;
-            box-shadow: 0 0 12px rgb(6 182 212 / 20%) !important;
+            border-color: rgb(214 179 90 / 55%) !important;
+            box-shadow: 0 0 12px rgb(32 212 212 / 25%) !important;
         }
+    }
+}
+
+/* ============================================================
+   GLASS UI — frosted panels, hero headline, testimonials
+   Applies to both themes (accent colors follow the theme).
+   ============================================================ */
+
+@keyframes glass-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-6px); }
+}
+
+@keyframes glass-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+}
+
+/* Hero headline */
+.tab__dashboard__header .title {
+    height: auto !important;
+    font-size: 3.4rem !important;
+    line-height: 1.15 !important;
+    margin: 1.2rem 0 0.4rem;
+
+    @include mobile-or-tablet-screen {
+        font-size: 2rem !important;
+    }
+}
+
+.tab__dashboard__header .subtitle {
+    display: block !important;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+/* Glass action tiles — wrap icon + label in a frosted card */
+.tab__dashboard__table__tiles {
+    gap: 1.6rem;
+    justify-content: center;
+
+    @include mobile-screen {
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+}
+
+.tab__dashboard__table__block {
+    position: relative;
+    flex: 1 1 0;
+    max-width: 15rem;
+    padding: 1.6rem 1rem 1.2rem !important;
+    border-radius: 1.4rem;
+    background: linear-gradient(150deg, rgb(32 212 212 / 14%) 0%, rgb(255 255 255 / 6%) 100%);
+    border: 1.5px solid rgb(32 212 212 / 40%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow:
+        0 8px 32px rgb(0 0 0 / 22%),
+        0 0 18px rgb(32 212 212 / 18%),
+        inset 0 1px 0 rgb(255 255 255 / 14%);
+    overflow: hidden;
+    transition:
+        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+        box-shadow 0.3s ease,
+        border-color 0.3s ease;
+
+    @include mobile-screen {
+        flex: 1 1 42%;
+        max-width: 100%;
+        padding: 1.2rem 0.8rem 1rem !important;
+    }
+
+    // animated shimmer sweep
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 10%) 50%, transparent 65%);
+        background-size: 220% 100%;
+        animation: glass-shimmer 4s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    // glowing accent bar at the bottom (alternating cyan/gold per card)
+    &::after {
+        content: '';
+        position: absolute;
+        left: 12%;
+        right: 12%;
+        bottom: 0;
+        height: 3px;
+        border-radius: 3px 3px 0 0;
+        background: linear-gradient(90deg, transparent, #20d4d4, transparent);
+        box-shadow: 0 0 12px 2px rgb(32 212 212 / 55%);
+    }
+
+    &:nth-child(2)::after {
+        background: linear-gradient(90deg, transparent, #d6b35a, transparent);
+        box-shadow: 0 0 12px 2px rgb(214 179 90 / 55%);
+    }
+
+    &:nth-child(4)::after {
+        background: linear-gradient(90deg, transparent, #d6b35a, transparent);
+        box-shadow: 0 0 12px 2px rgb(214 179 90 / 55%);
+    }
+
+    &:hover {
+        transform: translateY(-6px) scale(1.03);
+        border-color: rgb(32 212 212 / 45%);
+        box-shadow:
+            0 14px 40px rgb(0 0 0 / 30%),
+            0 0 24px rgb(32 212 212 / 30%);
+    }
+
+    .tab__dashboard__table__images {
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+}
+
+/* Light theme glass adjustments — strong surfaces so cards are clearly visible */
+body.theme--light {
+    .tab__dashboard__table__block {
+        background: linear-gradient(150deg, #ffffff 0%, #d9f2f2 100%);
+        border: 2px solid #0f9fa2;
+        box-shadow:
+            0 10px 30px rgb(15 159 162 / 20%),
+            0 0 0 1px rgb(255 255 255 / 80%) inset,
+            0 0 18px rgb(32 212 212 / 22%);
+
+        &::before {
+            background: linear-gradient(105deg, transparent 35%, rgb(15 159 162 / 8%) 50%, transparent 65%);
+        }
+
+        .tab__dashboard__table__images {
+            background: linear-gradient(145deg, #ffffff 0%, #e6f7f7 100%) !important;
+            border: 1.5px solid rgb(15 159 162 / 45%) !important;
+            box-shadow: 0 4px 14px rgb(15 159 162 / 15%) !important;
+        }
+
+        .dc-text { color: #0d1426 !important; font-weight: 800 !important; }
+
+        &:hover {
+            border-color: #d6b35a;
+            box-shadow:
+                0 16px 40px rgb(15 159 162 / 28%),
+                0 0 26px rgb(32 212 212 / 35%);
+
+            .dc-text { color: #0f9fa2 !important; }
+        }
+    }
+
+    .trader-voices__card {
+        background: linear-gradient(150deg, #ffffff 0%, #def3f3 100%);
+        border: 1.5px solid rgb(15 159 162 / 50%);
+        box-shadow: 0 8px 28px rgb(15 159 162 / 16%);
+
+        &--active {
+            border-color: #0f9fa2;
+            box-shadow: 0 14px 40px rgb(15 159 162 / 24%), 0 0 22px rgb(32 212 212 / 30%);
+        }
+    }
+
+    .trader-voices__title {
+        color: #0d1426;
+        text-shadow: none;
+
+        &::after { box-shadow: 0 0 8px rgb(15 159 162 / 45%); }
+    }
+    .trader-voices__quote { color: #2c3b66; }
+    .trader-voices__name  { color: #0d1426; }
+
+    .trader-voices__live-badge {
+        background: rgb(214 179 90 / 18%);
+        border-color: rgb(214 179 90 / 60%);
+        color: #8a6d2f;
+    }
+
+    .trader-voices__dot { background: rgb(13 20 38 / 18%); }
+}
+
+/* ── Testimonials rail — live widget ── */
+@keyframes tv-live-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgb(32 212 212 / 55%); }
+    70%      { box-shadow: 0 0 0 7px rgb(32 212 212 / 0%); }
+}
+
+@keyframes tv-card-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes tv-dot-fill {
+    from { width: 0; }
+    to   { width: 100%; }
+}
+
+.trader-voices {
+    width: 100%;
+    max-width: 110rem;
+    margin: 0 auto;
+    padding: 2.4rem 1.6rem 1.6rem;
+    text-align: center;
+
+    &__head {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    &__live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.3rem 0.9rem;
+        border-radius: 2rem;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgb(32 212 212 / 14%);
+        border: 1px solid rgb(32 212 212 / 45%);
+        color: #8ae9e9;
+    }
+
+    &__live-dot {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        background: #20d4d4;
+        animation: tv-live-pulse 1.6s ease-out infinite;
+    }
+
+    &--paused &__live-dot {
+        background: #d6b35a;
+        animation: none;
+    }
+
+    &__title {
+        margin: 0 0 0.4rem;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #eafffe;
+        text-shadow: 0 0 12px rgb(32 212 212 / 35%);
+
+        &::after {
+            content: '';
+            display: block;
+            width: 4.8rem;
+            height: 3px;
+            margin: 0.6rem auto 0;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #20d4d4, #d6b35a);
+            box-shadow: 0 0 10px rgb(32 212 212 / 50%);
+        }
+    }
+
+    &__rail {
+        display: flex;
+        gap: 1.2rem;
+        justify-content: center;
+        align-items: stretch;
+        margin-top: 1.6rem;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+
+    &__card {
+        flex: 1 1 0;
+        max-width: 22rem;
+        min-width: 0;
+        margin: 0;
+        padding: 1.4rem 1.4rem 1.2rem;
+        text-align: left;
+        border-radius: 1.2rem;
+        background: linear-gradient(150deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 2%) 100%);
+        border: 1px solid rgb(255 255 255 / 12%);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 8px 28px rgb(0 0 0 / 25%);
+        cursor: pointer;
+        opacity: 0.75;
+        transform: scale(0.97);
+        transition:
+            transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.3s ease,
+            border-color 0.3s ease,
+            box-shadow 0.3s ease;
+
+        &--active {
+            opacity: 1;
+            transform: scale(1.04) translateY(-4px);
+            border-color: rgb(32 212 212 / 55%);
+            box-shadow:
+                0 14px 40px rgb(0 0 0 / 35%),
+                0 0 24px rgb(32 212 212 / 30%);
+            animation: tv-card-in 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        &:hover { opacity: 1; }
+    }
+
+    &__card-head {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        margin-bottom: 0.8rem;
+    }
+
+    &__avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.4rem;
+        height: 2.4rem;
+        flex-shrink: 0;
+        border-radius: 50%;
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #0f172a;
+        background: linear-gradient(135deg, #20d4d4 0%, #d6b35a 100%);
+        box-shadow: 0 0 10px rgb(32 212 212 / 40%);
+    }
+
+    &__name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #eafffe;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__stars {
+        color: #d6b35a;
+        font-size: 0.8rem;
+        letter-spacing: 0.1em;
+        text-shadow: 0 0 6px rgb(214 179 90 / 60%);
+        white-space: nowrap;
+    }
+
+    &__quote {
+        margin: 0;
+        font-size: 0.85rem;
+        font-style: italic;
+        line-height: 1.5;
+        color: #a8dcd8;
+    }
+
+    &__dots {
+        display: flex;
+        justify-content: center;
+        gap: 0.6rem;
+        margin-top: 1.4rem;
+    }
+
+    &__dot {
+        position: relative;
+        width: 2.2rem;
+        height: 0.5rem;
+        padding: 0;
+        border: 0;
+        border-radius: 0.4rem;
+        background: rgb(255 255 255 / 15%);
+        cursor: pointer;
+        overflow: hidden;
+        transition: box-shadow 0.3s ease;
+
+        &--active {
+            box-shadow: 0 0 8px rgb(32 212 212 / 60%);
+        }
+
+        &-progress {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #20d4d4, #d6b35a);
+        }
+    }
+
+    // progress fill sweeps across the active dot; pauses when hovering the widget
+    &:not(&--paused) &__dot--active .trader-voices__dot-progress {
+        animation: tv-dot-fill 5s linear forwards;
+    }
+
+    &--paused &__dot--active .trader-voices__dot-progress {
+        width: 100%;
+        opacity: 0.5;
+    }
+}
+
+@media (max-width: 900px) {
+    .trader-voices {
+        padding: 1.6rem 0.8rem 1.2rem;
+
+        &__title { font-size: 1.3rem; }
+
+        &__rail {
+            flex-wrap: wrap;
+            gap: 0.9rem;
+        }
+
+        &__card {
+            flex: 1 1 100%;
+            max-width: 100%;
+
+            // On small screens show only the active testimonial as a focused card
+            display: none;
+
+            &--active { display: block; }
+        }
+    }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+    .trader-voices__card {
+        flex: 1 1 30%;
+    }
+}
+
+/* ============================================================
+   MOBILE GLASSMORPHISM — deep teal & black, frosted glossy panels
+   ============================================================ */
+@include mobile-or-tablet-screen {
+    body.theme--light .tab__dashboard__content,
+    body.theme--dark .tab__dashboard__content,
+    .tab__dashboard__content {
+        background:
+            radial-gradient(ellipse 120% 60% at 50% -10%, rgb(32 212 212 / 12%) 0%, transparent 55%),
+            linear-gradient(rgb(5 18 17 / 55%), rgb(5 18 17 / 62%)),
+            url('../../assets/dashboard-bg-mobile.png') !important;
+        background-size: cover !important;
+        background-position: center top !important;
+        padding: 1.6rem 1.2rem 2rem;
+
+        &::before {
+            background-image:
+                radial-gradient(circle, rgb(32 212 212 / 7%) 1px, transparent 1px) !important;
+            background-size: 22px 22px !important;
+        }
+    }
+
+    // Hero — luminous deep-teal headline
+    .tab__dashboard__header {
+        .title {
+            background: linear-gradient(
+                90deg,
+                #9ff1ec 0%, #20d4d4 35%, #eafffe 50%, #20d4d4 65%, #9ff1ec 100%
+            ) !important;
+            background-size: 300% auto !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            filter: drop-shadow(0 0 14px rgb(32 212 212 / 40%)) !important;
+        }
+
+        .subtitle {
+            color: #8fd4cf !important;
+            text-shadow: 0 1px 10px rgb(32 212 212 / 20%);
+        }
+    }
+
+    // Frosted glass action cards with glossy top highlight + depth
+    .tab__dashboard__table__tiles {
+        gap: 1.2rem;
+    }
+
+    .tab__dashboard__table__block {
+        background: linear-gradient(
+            160deg,
+            rgb(255 255 255 / 12%) 0%,
+            rgb(20 42 44 / 55%) 45%,
+            rgb(8 20 22 / 70%) 100%
+        ) !important;
+        border: 1.5px solid rgb(32 212 212 / 35%) !important;
+        box-shadow:
+            0 14px 34px rgb(0 0 0 / 40%),
+            0 0 22px rgb(32 212 212 / 18%),
+            inset 0 1px 0 rgb(255 255 255 / 22%),
+            inset 0 -12px 24px rgb(0 0 0 / 25%) !important;
+
+        &::before {
+            background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 12%) 48%, transparent 66%);
+        }
+
+        .tab__dashboard__table__images {
+            background: linear-gradient(150deg, rgb(255 255 255 / 16%) 0%, rgb(20 42 44 / 60%) 100%) !important;
+            border: 1px solid rgb(32 212 212 / 40%) !important;
+            box-shadow:
+                0 6px 16px rgb(0 0 0 / 35%),
+                inset 0 1px 0 rgb(255 255 255 / 24%) !important;
+        }
+
+        .dc-text {
+            color: #eafffe !important;
+            font-weight: 800 !important;
+            text-shadow: 0 0 8px rgb(32 212 212 / 40%);
+        }
+    }
+
+    // Feature chips — frosted glass with luminous icons
+    .feature-showcase__card {
+        background: linear-gradient(
+            160deg,
+            rgb(255 255 255 / 10%) 0%,
+            rgb(18 40 42 / 55%) 50%,
+            rgb(7 18 20 / 70%) 100%
+        ) !important;
+        border: 1.5px solid rgb(32 212 212 / 32%) !important;
+        box-shadow:
+            0 12px 28px rgb(0 0 0 / 38%),
+            0 0 18px rgb(32 212 212 / 16%),
+            inset 0 1px 0 rgb(255 255 255 / 20%),
+            inset 0 -10px 20px rgb(0 0 0 / 25%) !important;
+
+        .feature-showcase__card-icon {
+            background: linear-gradient(150deg, rgb(255 255 255 / 16%) 0%, rgb(18 40 42 / 60%) 100%);
+            border: 1px solid rgb(32 212 212 / 45%);
+            box-shadow:
+                0 4px 12px rgb(0 0 0 / 35%),
+                inset 0 1px 0 rgb(255 255 255 / 22%),
+                0 0 12px rgb(32 212 212 / 30%);
+
+            svg {
+                fill: #9ff1ec;
+                filter: drop-shadow(0 0 8px rgb(32 212 212 / 80%));
+            }
+        }
+
+        .feature-showcase__card-title {
+            color: #eafffe !important;
+            text-shadow: 0 0 8px rgb(32 212 212 / 45%);
+        }
+    }
+
+    // Testimonial widget — deep frosted panel
+    .trader-voices {
+        &__card {
+            background: linear-gradient(
+                160deg,
+                rgb(255 255 255 / 10%) 0%,
+                rgb(16 36 38 / 60%) 55%,
+                rgb(7 18 20 / 75%) 100%
+            ) !important;
+            border: 1.5px solid rgb(32 212 212 / 30%) !important;
+            box-shadow:
+                0 14px 34px rgb(0 0 0 / 42%),
+                inset 0 1px 0 rgb(255 255 255 / 20%),
+                inset 0 -10px 22px rgb(0 0 0 / 28%) !important;
+
+            &--active {
+                border-color: rgb(32 212 212 / 55%) !important;
+                box-shadow:
+                    0 18px 44px rgb(0 0 0 / 50%),
+                    0 0 26px rgb(32 212 212 / 28%),
+                    inset 0 1px 0 rgb(255 255 255 / 24%) !important;
+            }
+        }
+
+        &__title { color: #eafffe; }
+        &__name  { color: #eafffe; }
+        &__quote { color: #a9d9d5; }
+        &__dot   { background: rgb(255 255 255 / 18%); }
     }
 }
