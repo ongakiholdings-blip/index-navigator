@@ -203,6 +203,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const fireRoundRef     = useRef<() => void>(() => {});
     const symbolRef        = useRef(symbol);
     const latestDigitRef   = useRef<number | null>(null);   // always the most recent tick digit
+    const lastTickAtRef    = useRef(0);
     const marketTriggerRef = useRef<HTMLButtonElement>(null);
     const marketDropdownRef = useRef<HTMLDivElement>(null);
     useEffect(() => { symbolRef.current = symbol; }, [symbol]);
@@ -248,7 +249,7 @@ const OverUnderEngine: React.FC = observer(() => {
         if (passiveTickId.current && api_base.api) {
             try { (api_base.api as any).send({ forget: passiveTickId.current }); } catch { /* ignore */ }
             passiveTickId.current = null;
-        } else {
+        } else if (passiveSub.current) {
             // The subscription ID hasn't arrived yet — flag it so startPassiveSub
             // can forget the server-side subscription as soon as the ID resolves.
             pendingForget.current = true;
@@ -475,6 +476,7 @@ const OverUnderEngine: React.FC = observer(() => {
                 const d        = getLastDigit(priceStr);
                 if (d === null) return;
                 latestDigitRef.current = d;
+                lastTickAtRef.current = Date.now();
                 setCurrentDigit(d);
                 setCursorTick(prev => prev + 1);
                 setDigits(prev  => {
@@ -638,6 +640,18 @@ const OverUnderEngine: React.FC = observer(() => {
             clearInterval(interval);
             window.removeEventListener('focus', checkHealth);
         };
+    }, [startPassiveSub]);
+
+    // Recover a stalled stream as well as a disconnected stream. The API
+    // object can remain present while a server-side subscription has stopped.
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (api_base.api && passiveSub.current && lastTickAtRef.current > 0 &&
+                Date.now() - lastTickAtRef.current > 7000) {
+                startPassiveSub(symbolRef.current, false);
+            }
+        }, 3000);
+        return () => clearInterval(interval);
     }, [startPassiveSub]);
 
     // Teardown on unmount — kill everything including the passive subscription
