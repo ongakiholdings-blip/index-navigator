@@ -17,6 +17,91 @@ const DIGIT_WINDOW  = 1000;
 /** Digits that act as entry triggers */
 const ENTRY_DIGITS = new Set([4, 5]);
 
+// ─── strategy definitions ─────────────────────────────────────────────────────
+
+type StrategyMode = 'over_under' | 'over1' | 'over2' | 'under8' | 'under7' | 'even' | 'odd';
+type RecoveryMethod = 'martingale' | 'dalembert' | 'flat';
+
+interface StrategyConfig {
+    label: string;
+    subtitle: string;
+    contractType: string;
+    barrier?: string;
+    secondContractType?: string;
+    secondBarrier?: string;
+    recovery: RecoveryMethod;
+    winProb: string;
+    color: string;
+}
+
+const ENGINE_STRATEGIES: Record<StrategyMode, StrategyConfig> = {
+    over_under: {
+        label: 'Over 5 / Under 4',
+        subtitle: 'Dual hedge: Over 5 + Under 4 simultaneously',
+        contractType: 'DIGITOVER',
+        barrier: '5',
+        secondContractType: 'DIGITUNDER',
+        secondBarrier: '4',
+        recovery: 'martingale',
+        winProb: '~40% each',
+        color: '#06b6d4',
+    },
+    over1: {
+        label: 'Over 1',
+        subtitle: 'Digit must be 2–9 (~80% win rate)',
+        contractType: 'DIGITOVER',
+        barrier: '1',
+        recovery: 'martingale',
+        winProb: '~80%',
+        color: '#10b981',
+    },
+    over2: {
+        label: 'Over 2',
+        subtitle: 'Digit must be 3–9 (~70% win rate)',
+        contractType: 'DIGITOVER',
+        barrier: '2',
+        recovery: 'martingale',
+        winProb: '~70%',
+        color: '#3b82f6',
+    },
+    under8: {
+        label: 'Under 8',
+        subtitle: 'Digit must be 0–7 (~80% win rate)',
+        contractType: 'DIGITUNDER',
+        barrier: '8',
+        recovery: 'martingale',
+        winProb: '~80%',
+        color: '#f59e0b',
+    },
+    under7: {
+        label: 'Under 7',
+        subtitle: 'Digit must be 0–6 (~70% win rate)',
+        contractType: 'DIGITUNDER',
+        barrier: '7',
+        recovery: 'martingale',
+        winProb: '~70%',
+        color: '#ec4899',
+    },
+    even: {
+        label: 'Even',
+        subtitle: 'Digit must be 0, 2, 4, 6, or 8 (~50%)',
+        contractType: 'DIGITEVEN',
+        recovery: 'dalembert',
+        winProb: '~50%',
+        color: '#8b5cf6',
+    },
+    odd: {
+        label: 'Odd',
+        subtitle: 'Digit must be 1, 3, 5, 7, or 9 (~50%)',
+        contractType: 'DIGITODD',
+        recovery: 'dalembert',
+        winProb: '~50%',
+        color: '#f97316',
+    },
+};
+
+const STRATEGY_ORDER: StrategyMode[] = ['over_under', 'over1', 'over2', 'under8', 'under7', 'even', 'odd'];
+
 interface Market { symbol: string; label: string; short: string; code: string; }
 
 const MARKETS: Market[] = [
@@ -112,6 +197,8 @@ interface EngineState {
     overRoundProfit:        number | null;
     underRoundProfit:       number | null;
     roundCounter:           number;
+    strategyMode:           StrategyMode;
+    dalembertUnit:          number;
 }
 
 function makeInitState(
@@ -120,6 +207,7 @@ function makeInitState(
     tp: number,
     sl: number,
     useEntry: boolean,
+    strategyMode: StrategyMode,
 ): EngineState {
     return {
         running: false,
@@ -150,6 +238,8 @@ function makeInitState(
         overRoundProfit: null,
         underRoundProfit: null,
         roundCounter: 0,
+        strategyMode,
+        dalembertUnit: stake,
     };
 }
 
@@ -166,6 +256,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const [symbol, setSymbol]         = useState('1HZ10V');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(true);
+    const [strategy, setStrategy]     = useState<StrategyMode>('over_under');
 
     // Display state
     const [isRunning, setIsRunning]                       = useState(false);
@@ -189,7 +280,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
-    const eng              = useRef<EngineState>(makeInitState(stake, martingale, takeProfit, stopLoss, entryMode));
+    const eng              = useRef<EngineState>(makeInitState(stake, martingale, takeProfit, stopLoss, entryMode, 'over_under'));
     const msgSub           = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveSub       = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveTickId    = useRef<string | null>(null);
@@ -314,37 +405,28 @@ const OverUnderEngine: React.FC = observer(() => {
             || (client as any).currency
             || 'USD';
 
-        const makeBuy = (contract_type: string, barrier: string, amount: number) => ({
-            buy: '1',
-            price: amount,
-            parameters: {
+        const makeBuy = (contract_type: string, barrier: string | undefined, amount: number) => {
+            const params: any = {
                 amount,
                 basis: 'stake',
                 contract_type,
                 currency,
                 duration: 1,
                 duration_unit: 't',
-                barrier,
                 underlying_symbol: symbolRef.current,
-            },
-        });
+            };
+            if (barrier !== undefined && barrier !== '') params.barrier = barrier;
+            return { buy: '1', price: amount, parameters: params };
+        };
 
+        const cfg = ENGINE_STRATEGIES[e.strategyMode];
+        const isDual = !!cfg.secondContractType;
         const entryLabel = e.entryDigit !== null ? ` [entry: ${e.entryDigit}]` : '';
-        setStatusMsg(`⚡ Placing Over 5 + Under 4${entryLabel}…`);
+        setStatusMsg(`⚡ Placing ${cfg.label}${entryLabel}…`);
 
         try {
             const api = api_base.api as any;
-            const [overRes, underRes] = await Promise.all([
-                api.send(makeBuy('DIGITOVER',  OVER_BARRIER,  e.overStake)),
-                api.send(makeBuy('DIGITUNDER', UNDER_BARRIER, e.underStake)),
-            ]);
 
-            e.overContractId  = overRes?.buy?.contract_id  ?? null;
-            e.underContractId = underRes?.buy?.contract_id ?? null;
-
-            // Add both contracts as soon as the buys succeed. The shared
-            // transaction area otherwise only receives the final won/lost
-            // update, which makes active Over/Under trades invisible.
             const recordPendingBuy = (response: any, contract_type: string, barrier: string, amount: number) => {
                 const buy = response?.buy;
                 if (!buy?.contract_id) return;
@@ -367,20 +449,46 @@ const OverUnderEngine: React.FC = observer(() => {
                 } as any);
             };
 
-            recordPendingBuy(overRes, 'DIGITOVER', OVER_BARRIER, e.currentRoundOverStake);
-            recordPendingBuy(underRes, 'DIGITUNDER', UNDER_BARRIER, e.currentRoundUnderStake);
+            if (isDual) {
+                const [overRes, underRes] = await Promise.all([
+                    api.send(makeBuy(cfg.contractType, cfg.barrier, e.overStake)),
+                    api.send(makeBuy(cfg.secondContractType!, cfg.secondBarrier, e.underStake)),
+                ]);
 
-            if (e.overContractId) {
-                const r = await api.send({ proposal_open_contract: 1, contract_id: e.overContractId, subscribe: 1 });
-                e.overSubId = r?.subscription?.id ?? null;
+                e.overContractId  = overRes?.buy?.contract_id  ?? null;
+                e.underContractId = underRes?.buy?.contract_id ?? null;
+
+                recordPendingBuy(overRes, cfg.contractType, cfg.barrier || '', e.currentRoundOverStake);
+                recordPendingBuy(underRes, cfg.secondContractType!, cfg.secondBarrier || '', e.currentRoundUnderStake);
+
+                if (e.overContractId) {
+                    const r = await api.send({ proposal_open_contract: 1, contract_id: e.overContractId, subscribe: 1 });
+                    e.overSubId = r?.subscription?.id ?? null;
+                } else {
+                    e.overSettled = true;
+                }
+                if (e.underContractId) {
+                    const r = await api.send({ proposal_open_contract: 1, contract_id: e.underContractId, subscribe: 1 });
+                    e.underSubId = r?.subscription?.id ?? null;
+                } else {
+                    e.underSettled = true;
+                }
             } else {
-                e.overSettled = true;
-            }
-            if (e.underContractId) {
-                const r = await api.send({ proposal_open_contract: 1, contract_id: e.underContractId, subscribe: 1 });
-                e.underSubId = r?.subscription?.id ?? null;
-            } else {
-                e.underSettled = true;
+                // Single-contract strategy — treat under side as immediately settled
+                e.underSettled    = true;
+                e.underContractId = null;
+
+                const res = await api.send(makeBuy(cfg.contractType, cfg.barrier, e.overStake));
+                e.overContractId = res?.buy?.contract_id ?? null;
+
+                recordPendingBuy(res, cfg.contractType, cfg.barrier || '', e.currentRoundOverStake);
+
+                if (e.overContractId) {
+                    const r = await api.send({ proposal_open_contract: 1, contract_id: e.overContractId, subscribe: 1 });
+                    e.overSubId = r?.subscription?.id ?? null;
+                } else {
+                    e.overSettled = true;
+                }
             }
 
             setStatusMsg('Running — waiting for results…');
@@ -411,11 +519,25 @@ const OverUnderEngine: React.FC = observer(() => {
         e.totalProfit = round2(e.totalProfit + profit);
         setTotalProfit(e.totalProfit);
 
+        const recovery = ENGINE_STRATEGIES[e.strategyMode].recovery;
+
+        const applyRecovery = (currentStake: number, sideWon: boolean): number => {
+            if (recovery === 'dalembert') {
+                if (sideWon) return Math.max(e.baseStake, round2(currentStake - e.dalembertUnit));
+                return round2(currentStake + e.dalembertUnit);
+            }
+            if (recovery === 'flat') return e.baseStake;
+            // martingale (default)
+            if (sideWon) return e.baseStake;
+            return round2(currentStake * e.martingale);
+        };
+
         if (isOver) {
             e.overSettled     = true;
             e.overRoundProfit = profit;
-            if (won) { e.overWins++;   e.overStake = e.baseStake;                setLastOverResult('won'); }
-            else     { e.overLosses++; e.overStake = round2(e.overStake * e.martingale); setLastOverResult('lost'); }
+            e.overStake       = applyRecovery(e.overStake, won);
+            if (won) { e.overWins++;   setLastOverResult('won'); }
+            else     { e.overLosses++; setLastOverResult('lost'); }
             setOverWins(e.overWins);
             setOverLosses(e.overLosses);
             setOverCurrentStake(e.overStake);
@@ -424,8 +546,9 @@ const OverUnderEngine: React.FC = observer(() => {
         if (isUnder) {
             e.underSettled     = true;
             e.underRoundProfit = profit;
-            if (won) { e.underWins++;   e.underStake = e.baseStake;                   setLastUnderResult('won'); }
-            else     { e.underLosses++; e.underStake = round2(e.underStake * e.martingale); setLastUnderResult('lost'); }
+            e.underStake       = applyRecovery(e.underStake, won);
+            if (won) { e.underWins++;   setLastUnderResult('won'); }
+            else     { e.underLosses++; setLastUnderResult('lost'); }
             setUnderWins(e.underWins);
             setUnderLosses(e.underLosses);
             setUnderCurrentStake(e.underStake);
@@ -570,7 +693,7 @@ const OverUnderEngine: React.FC = observer(() => {
         if (eng.current.running) return;
         if (!api_base.api) { setStatusMsg('⚠ Not connected — please log in first'); return; }
 
-        eng.current = makeInitState(stake, martingale, takeProfit, stopLoss, entryMode);
+        eng.current = makeInitState(stake, martingale, takeProfit, stopLoss, entryMode, strategy);
         eng.current.running = true;
 
         setIsRunning(true);
@@ -622,7 +745,7 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
-    }, [stake, martingale, takeProfit, stopLoss, entryMode, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
+    }, [stake, martingale, takeProfit, stopLoss, entryMode, strategy, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
 
     // Start passive ticks whenever the selected symbol changes (or on first
     // mount). The engine can render before authentication finishes, so retry
@@ -707,6 +830,8 @@ const OverUnderEngine: React.FC = observer(() => {
     const activeMarket = MARKETS.find(m => m.symbol === symbol) ?? MARKETS[0];
     const digitCounts = Array.from({ length: 10 }, (_, digit) => digitWindow.filter(value => value === digit).length);
     const digitPercentages = digitCounts.map(count => digitWindow.length > 0 ? (count / digitWindow.length) * 100 : 0);
+    const activeCfg   = ENGINE_STRATEGIES[strategy];
+    const isDualMode  = !!activeCfg.secondContractType;
 
     return (
         <div className='oue'>
@@ -715,7 +840,7 @@ const OverUnderEngine: React.FC = observer(() => {
             <div className='oue__header'>
                 <div className='oue__title'>
                     <span className='oue__title-icon'>⚡</span>
-                    <span>OVER 5 / UNDER 4 ENGINE</span>
+                    <span>{activeCfg.label.toUpperCase()} ENGINE</span>
 
                     {/* entry-mode indicator badge */}
                     {entryMode && (
@@ -847,55 +972,114 @@ const OverUnderEngine: React.FC = observer(() => {
                 )}
             </div>
 
-            {/* ── two side panels ── */}
-            <div className='oue__panels'>
-                <div className={`oue__panel oue__panel--over${lastOverResult ? ` oue__panel--${lastOverResult}` : ''}`}>
-                    <div className='oue__panel-top'>
-                        <span className='oue__panel-name'>OVER 5</span>
-                        <span className='oue__panel-win-pct'>{profitPct(overWins, overWins + overLosses)}% win</span>
-                    </div>
-                    <div className='oue__panel-subtitle'>Digit must be 6, 7, 8, or 9</div>
-                    {/* prominent wins / losses counters */}
-                    <div className='oue__wl-row'>
-                        <div className='oue__wl oue__wl--win'>
-                            <span className='oue__wl-num'>{overWins}</span>
-                            <span className='oue__wl-label'>WINS</span>
-                        </div>
-                        <div className='oue__wl-divider' />
-                        <div className='oue__wl oue__wl--loss'>
-                            <span className='oue__wl-num'>{overLosses}</span>
-                            <span className='oue__wl-label'>LOSSES</span>
-                        </div>
-                    </div>
-                    <div className='oue__panel-stats'>
-                        <div className='oue__stat'><span className='oue__stat-label'>Stake</span><span className='oue__stat-val'>{overCurrentStake.toFixed(2)}</span></div>
-                    </div>
-                    {lastOverResult && <div className={`oue__badge oue__badge--${lastOverResult}`}>{lastOverResult === 'won' ? '✓ WIN' : '✗ LOSS'}</div>}
+            {/* ── strategy selector ── */}
+            <div className='oue__strategy-bar'>
+                <div className='oue__strategy-label'>Strategy</div>
+                <div className='oue__strategy-grid'>
+                    {STRATEGY_ORDER.map(mode => {
+                        const cfg = ENGINE_STRATEGIES[mode];
+                        const active = strategy === mode;
+                        return (
+                            <button
+                                key={mode}
+                                type='button'
+                                disabled={isRunning}
+                                className={`oue__strategy-btn${active ? ' oue__strategy-btn--active' : ''}`}
+                                style={active ? { borderColor: cfg.color, color: cfg.color } : undefined}
+                                onClick={() => setStrategy(mode)}
+                                title={cfg.subtitle}
+                            >
+                                <span className='oue__strategy-btn-name'>{cfg.label}</span>
+                                <span className='oue__strategy-btn-prob'>{cfg.winProb}</span>
+                            </button>
+                        );
+                    })}
                 </div>
+                <div className='oue__strategy-meta'>
+                    <span className='oue__strategy-subtitle'>{activeCfg.subtitle}</span>
+                    <span className='oue__strategy-recovery'>
+                        Recovery: <strong>{activeCfg.recovery === 'dalembert' ? "D'Alembert" : activeCfg.recovery === 'flat' ? 'Flat stake' : 'Martingale ×2'}</strong>
+                    </span>
+                </div>
+            </div>
 
-                <div className={`oue__panel oue__panel--under${lastUnderResult ? ` oue__panel--${lastUnderResult}` : ''}`}>
-                    <div className='oue__panel-top'>
-                        <span className='oue__panel-name'>UNDER 4</span>
-                        <span className='oue__panel-win-pct'>{profitPct(underWins, underWins + underLosses)}% win</span>
-                    </div>
-                    <div className='oue__panel-subtitle'>Digit must be 0, 1, 2, or 3</div>
-                    {/* prominent wins / losses counters */}
-                    <div className='oue__wl-row'>
-                        <div className='oue__wl oue__wl--win'>
-                            <span className='oue__wl-num'>{underWins}</span>
-                            <span className='oue__wl-label'>WINS</span>
+            {/* ── panels (dual or single depending on strategy) ── */}
+            <div className={`oue__panels${isDualMode ? '' : ' oue__panels--single'}`}>
+                {isDualMode ? (
+                    <>
+                        <div className={`oue__panel oue__panel--over${lastOverResult ? ` oue__panel--${lastOverResult}` : ''}`}>
+                            <div className='oue__panel-top'>
+                                <span className='oue__panel-name'>OVER 5</span>
+                                <span className='oue__panel-win-pct'>{profitPct(overWins, overWins + overLosses)}% win</span>
+                            </div>
+                            <div className='oue__panel-subtitle'>Digit must be 6, 7, 8, or 9</div>
+                            <div className='oue__wl-row'>
+                                <div className='oue__wl oue__wl--win'>
+                                    <span className='oue__wl-num'>{overWins}</span>
+                                    <span className='oue__wl-label'>WINS</span>
+                                </div>
+                                <div className='oue__wl-divider' />
+                                <div className='oue__wl oue__wl--loss'>
+                                    <span className='oue__wl-num'>{overLosses}</span>
+                                    <span className='oue__wl-label'>LOSSES</span>
+                                </div>
+                            </div>
+                            <div className='oue__panel-stats'>
+                                <div className='oue__stat'><span className='oue__stat-label'>Stake</span><span className='oue__stat-val'>{overCurrentStake.toFixed(2)}</span></div>
+                            </div>
+                            {lastOverResult && <div className={`oue__badge oue__badge--${lastOverResult}`}>{lastOverResult === 'won' ? '✓ WIN' : '✗ LOSS'}</div>}
                         </div>
-                        <div className='oue__wl-divider' />
-                        <div className='oue__wl oue__wl--loss'>
-                            <span className='oue__wl-num'>{underLosses}</span>
-                            <span className='oue__wl-label'>LOSSES</span>
+
+                        <div className={`oue__panel oue__panel--under${lastUnderResult ? ` oue__panel--${lastUnderResult}` : ''}`}>
+                            <div className='oue__panel-top'>
+                                <span className='oue__panel-name'>UNDER 4</span>
+                                <span className='oue__panel-win-pct'>{profitPct(underWins, underWins + underLosses)}% win</span>
+                            </div>
+                            <div className='oue__panel-subtitle'>Digit must be 0, 1, 2, or 3</div>
+                            <div className='oue__wl-row'>
+                                <div className='oue__wl oue__wl--win'>
+                                    <span className='oue__wl-num'>{underWins}</span>
+                                    <span className='oue__wl-label'>WINS</span>
+                                </div>
+                                <div className='oue__wl-divider' />
+                                <div className='oue__wl oue__wl--loss'>
+                                    <span className='oue__wl-num'>{underLosses}</span>
+                                    <span className='oue__wl-label'>LOSSES</span>
+                                </div>
+                            </div>
+                            <div className='oue__panel-stats'>
+                                <div className='oue__stat'><span className='oue__stat-label'>Stake</span><span className='oue__stat-val'>{underCurrentStake.toFixed(2)}</span></div>
+                            </div>
+                            {lastUnderResult && <div className={`oue__badge oue__badge--${lastUnderResult}`}>{lastUnderResult === 'won' ? '✓ WIN' : '✗ LOSS'}</div>}
                         </div>
+                    </>
+                ) : (
+                    <div
+                        className={`oue__panel oue__panel--single${lastOverResult ? ` oue__panel--${lastOverResult}` : ''}`}
+                        style={{ '--oue-strategy-color': activeCfg.color } as React.CSSProperties}
+                    >
+                        <div className='oue__panel-top'>
+                            <span className='oue__panel-name' style={{ color: activeCfg.color }}>{activeCfg.label.toUpperCase()}</span>
+                            <span className='oue__panel-win-pct'>{profitPct(overWins, overWins + overLosses)}% win</span>
+                        </div>
+                        <div className='oue__panel-subtitle'>{activeCfg.subtitle}</div>
+                        <div className='oue__wl-row'>
+                            <div className='oue__wl oue__wl--win'>
+                                <span className='oue__wl-num'>{overWins}</span>
+                                <span className='oue__wl-label'>WINS</span>
+                            </div>
+                            <div className='oue__wl-divider' />
+                            <div className='oue__wl oue__wl--loss'>
+                                <span className='oue__wl-num'>{overLosses}</span>
+                                <span className='oue__wl-label'>LOSSES</span>
+                            </div>
+                        </div>
+                        <div className='oue__panel-stats'>
+                            <div className='oue__stat'><span className='oue__stat-label'>Stake</span><span className='oue__stat-val'>{overCurrentStake.toFixed(2)}</span></div>
+                        </div>
+                        {lastOverResult && <div className={`oue__badge oue__badge--${lastOverResult}`}>{lastOverResult === 'won' ? '✓ WIN' : '✗ LOSS'}</div>}
                     </div>
-                    <div className='oue__panel-stats'>
-                        <div className='oue__stat'><span className='oue__stat-label'>Stake</span><span className='oue__stat-val'>{underCurrentStake.toFixed(2)}</span></div>
-                    </div>
-                    {lastUnderResult && <div className={`oue__badge oue__badge--${lastUnderResult}`}>{lastUnderResult === 'won' ? '✓ WIN' : '✗ LOSS'}</div>}
-                </div>
+                )}
             </div>
 
             {/* ── summary bar ── */}

@@ -2058,3 +2058,106 @@ body.theme--dark {
         }
     }
 }
+
+// ─── Strategy selector ────────────────────────────────────────────────────────
+
+.oue__strategy-bar {
+    padding: 0.9rem 1.2rem 0.8rem;
+    border-bottom: 1px solid var(--general-section-2);
+    background: var(--general-main-1);
+}
+
+.oue__strategy-label {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-less-prominent);
+    text-transform: uppercase;
+    margin-bottom: 0.55rem;
+}
+
+.oue__strategy-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.oue__strategy-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    padding: 0.35rem 0.65rem;
+    border: 1.5px solid var(--general-section-2);
+    border-radius: 6px;
+    background: var(--general-section-2);
+    color: var(--text-less-prominent);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    min-width: 6.5rem;
+
+    &:hover:not(:disabled) {
+        background: var(--general-section-1);
+        border-color: var(--border-normal);
+        color: var(--text-general);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    &--active {
+        background: color-mix(in srgb, var(--general-section-2), transparent 20%);
+        font-weight: 600;
+    }
+}
+
+.oue__strategy-btn-name {
+    font-size: 1.1rem;
+    font-weight: inherit;
+    white-space: nowrap;
+}
+
+.oue__strategy-btn-prob {
+    font-size: 0.9rem;
+    opacity: 0.75;
+}
+
+.oue__strategy-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 0.55rem;
+}
+
+.oue__strategy-subtitle {
+    font-size: 1rem;
+    color: var(--text-less-prominent);
+}
+
+.oue__strategy-recovery {
+    font-size: 1rem;
+    color: var(--text-less-prominent);
+
+    strong {
+        color: var(--text-general);
+    }
+}
+
+// ─── Single-strategy panel ────────────────────────────────────────────────────
+
+.oue__panels--single {
+    display: flex;
+    justify-content: center;
+    padding: 0.8rem 1.2rem;
+
+    .oue__panel--single {
+        width: 100%;
+        max-width: 32rem;
+        border-color: var(--oue-strategy-color, var(--general-section-2));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--oue-strategy-color, transparent), transparent 70%);
+    }
+}
