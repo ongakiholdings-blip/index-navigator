@@ -12,6 +12,7 @@ import './over-under-engine.scss';
 const OVER_BARRIER  = '5';
 const UNDER_BARRIER = '4';
 const MAX_DIGITS    = 30;
+const DIGIT_WINDOW  = 1000;
 
 /** Digits that act as entry triggers */
 const ENTRY_DIGITS = new Set([4, 5]);
@@ -157,8 +158,6 @@ function makeInitState(
 const OverUnderEngine: React.FC = observer(() => {
     const { client, dashboard, transactions, run_panel, summary_card, ui } = useStore();
 
-    const digitsRef = useRef<HTMLDivElement | null>(null);
-
     // Config
     const [stake, setStake]           = useState(0.5);
     const [martingale]                = useState(2);
@@ -172,6 +171,9 @@ const OverUnderEngine: React.FC = observer(() => {
     const [isRunning, setIsRunning]                       = useState(false);
     const [statusMsg, setStatusMsg]                       = useState('Ready to trade');
     const [digits, setDigits]                             = useState<number[]>([]);
+    const [digitWindow, setDigitWindow]                   = useState<number[]>([]);
+    const [currentDigit, setCurrentDigit]                 = useState<number | null>(null);
+    const [cursorTick, setCursorTick]                     = useState(0);
     const [prices, setPrices]                             = useState<string[]>([]);
     const [totalProfit, setTotalProfit]                   = useState(0);
     const [overWins, setOverWins]                         = useState(0);
@@ -448,12 +450,16 @@ const OverUnderEngine: React.FC = observer(() => {
 
     // ── passive subscription: stream ticks as soon as a market is chosen ─────
 
-    const startPassiveSub = useCallback(async (sym: string) => {
+    const startPassiveSub = useCallback(async (sym: string, resetHistory = true) => {
         if (!api_base.api) return;
         pendingForget.current = false; // reset before stopping so stopPassiveSub can set it fresh
         stopPassiveSub();
-        setDigits([]);
-        setPrices([]);
+        if (resetHistory) {
+            setDigits([]);
+            setDigitWindow([]);
+            setCurrentDigit(null);
+            setPrices([]);
+        }
         // Record which API instance this subscription is for so the health-check
         // effect can detect when api_base.init() replaces it with a new instance.
         passiveApiRef.current = api_base.api;
@@ -469,14 +475,16 @@ const OverUnderEngine: React.FC = observer(() => {
                 const d        = getLastDigit(priceStr);
                 if (d === null) return;
                 latestDigitRef.current = d;
+                setCurrentDigit(d);
+                setCursorTick(prev => prev + 1);
                 setDigits(prev  => {
                     const n = [...prev, d];
                     const next = n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n;
-                    requestAnimationFrame(() => {
-                        const wrapper = digitsRef.current;
-                        if (wrapper) wrapper.scrollLeft = wrapper.scrollWidth;
-                    });
                     return next;
+                });
+                setDigitWindow(prev => {
+                    const next = [...prev, d];
+                    return next.length > DIGIT_WINDOW ? next.slice(-DIGIT_WINDOW) : next;
                 });
                 setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
 
@@ -537,8 +545,6 @@ const OverUnderEngine: React.FC = observer(() => {
         setLastOverResult(null);
         setLastUnderResult(null);
         setLastEntryDigit(null);
-        setDigits([]);
-        setPrices([]);
         setIsWaitingEntry(entryMode);
         setStatusMsg(entryMode ? '👀 Watching for entry digit 4 or 5…' : 'Connecting…');
 
@@ -553,8 +559,9 @@ const OverUnderEngine: React.FC = observer(() => {
         );
         (ui as any)?.setPromptHandler?.(true);
 
-        // Restart passive ticks so digit history is clean for this run
-        await startPassiveSub(symbolRef.current);
+        // Keep the existing passive tick history while ensuring the selected
+        // market subscription is live for the engine.
+        await startPassiveSub(symbolRef.current, false);
 
         // msgSub handles contract results only — ticks are in passiveSub
         if (msgSub.current) msgSub.current.unsubscribe();
@@ -649,6 +656,8 @@ const OverUnderEngine: React.FC = observer(() => {
     const latestPriceDigit = latestPrice ? latestPrice.slice(-1) : '';
     const profitPct   = (n: number, total: number) => total > 0 ? Math.round((n / total) * 100) : 0;
     const activeMarket = MARKETS.find(m => m.symbol === symbol) ?? MARKETS[0];
+    const digitCounts = Array.from({ length: 10 }, (_, digit) => digitWindow.filter(value => value === digit).length);
+    const digitPercentages = digitCounts.map(count => digitWindow.length > 0 ? (count / digitWindow.length) * 100 : 0);
 
     return (
         <div className='oue'>
@@ -727,33 +736,44 @@ const OverUnderEngine: React.FC = observer(() => {
                     </div>
                 </div>
 
-                {/* digit row */}
-                <div ref={digitsRef} className='oue__digits'>
-                    {digits.length === 0 ? (
-                        <span className='oue__digit-empty'>{api_base.api ? 'Connecting to market…' : 'Log in to see live digits'}</span>
-                    ) : digits.map((d, i) => {
-                        const isLast    = i === digits.length - 1;
-                        const isEntry   = ENTRY_DIGITS.has(d);
-                        let cls = 'oue__digit';
-                        if (d > 5)        cls += ' oue__digit--over';
-                        else if (d < 4)   cls += ' oue__digit--under';
-                        else              cls += ' oue__digit--neutral';
-                        if (isLast)       cls += ' oue__digit--last';
-                        if (isEntry && entryMode) cls += ' oue__digit--entry';
-                        const price = prices[i] ?? '';
-                        // Highlight the last digit within the price string
-                        const priceBody = price.slice(0, -1);
-                        const priceLastChar = price.slice(-1);
-                        return (
-                            <span key={i} className={`oue__tick${isLast ? ' oue__tick--last' : ''}`}>
-                                <span className='oue__tick-price'>
-                                    <span className='oue__tick-price-body'>{priceBody}</span>
-                                    <span className={`oue__tick-price-digit${isLast ? ' oue__tick-price-digit--last' : ''}`}>{priceLastChar}</span>
-                                </span>
-                                <span className={cls}>{d}</span>
+                <div className='oue__course-price-row'>
+                    <div className='oue__course-price'>
+                        {latestPrice ? (
+                            <span>
+                                <span className='oue__course-price-body'>{latestPriceBody}</span>
+                                <span className='oue__course-price-digit'>{latestPriceDigit}</span>
                             </span>
-                        );
-                    })}
+                        ) : (
+                            <span className='oue__course-price-empty'>—</span>
+                        )}
+                    </div>
+
+                    <div className='oue__course-window'>
+                        <span>WINDOW</span>
+                        <strong>{DIGIT_WINDOW}</strong>
+                        <span>TICKS</span>
+                    </div>
+                </div>
+
+                <div className='oue__digit-course' aria-label={`Digit distribution over ${digitWindow.length} ticks`}>
+                    <div className='oue__digit-course-grid'>
+                        {digitCounts.map((count, digit) => {
+                            const isCurrent = currentDigit === digit;
+                            return (
+                                <div
+                                    className={`oue__course-digit${isCurrent ? ' oue__course-digit--current' : ''}`}
+                                    key={digit}
+                                    aria-current={isCurrent ? 'true' : undefined}
+                                    aria-label={`Digit ${digit}: ${digitPercentages[digit].toFixed(1)} percent, ${count} ticks${isCurrent ? ', latest generated digit' : ''}`}
+                                >
+                                    {isCurrent && <span className='oue__course-cursor' key={cursorTick} aria-hidden='true'>▼</span>}
+                                    <span className='oue__course-digit-value'>{digit}</span>
+                                    <span className='oue__course-digit-percent'>{digitPercentages[digit].toFixed(1)}%</span>
+                                    <span className='oue__course-digit-count'>{count}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 <div className='oue__digit-legend'>
