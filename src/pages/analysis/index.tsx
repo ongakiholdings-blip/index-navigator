@@ -752,4 +752,5 @@ const AnalysisTools = observer(() => {
     );
 });
 
+export { Strategies };
 export default AnalysisTools;

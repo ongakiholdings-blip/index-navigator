@@ -50,7 +50,7 @@ import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
 import FreeBots from '../free-bots';
 import OverUnderEngine from '@/components/over-under-engine';
-import AnalysisTools from '../analysis';
+import AnalysisTools, { Strategies as AIBotsStrategies } from '../analysis';
 import CopyTrading from '../copy-trading';
 import DigitMatcher from '@/components/digit-matcher';
 import './main.scss';
@@ -89,7 +89,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'd_circles', 'digit_matcher', 'analysis_tool', 'market_analyzer', 'chart', 'trading_view', 'copy_trading', 'analysis', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'd_circles', 'ai_bots', 'digit_matcher', 'analysis_tool', 'market_analyzer', 'chart', 'trading_view', 'copy_trading', 'analysis', 'tutorial'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -458,6 +458,21 @@ const AppWrapper = observer(() => {
                                     style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
                                     allow='clipboard-read; clipboard-write'
                                 />
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='var(--text-general)' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'>
+                                            <circle cx='12' cy='8' r='3' />
+                                            <path d='M6 20v-2a6 6 0 0 1 12 0v2' />
+                                            <path d='M3 9h2M19 9h2M12 3V1' />
+                                        </svg>
+                                        <Localize i18n_default_text='AI-Bots' />
+                                    </>
+                                }
+                                id='id-ai-bots'
+                            >
+                                <AIBotsStrategies />
                             </div>
                             <div
                                 label={
