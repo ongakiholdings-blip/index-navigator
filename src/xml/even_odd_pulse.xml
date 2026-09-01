@@ -353,7 +353,7 @@
       </block>
     </statement>
   </block>
-  <block type="before_purchase" id="wG:`z7m$5=Rn:He8i*YC" collapsed="true" deletable="false" x="0" y="916">
+  <block type="before_purchase" id="wG:`z7m$5=Rn:He8i*YC" deletable="false" x="0" y="916">
     <statement name="BEFOREPURCHASE_STACK">
       <block type="variables_set" id="MYuK8W+5|y?En@63+[fP" collapsed="true">
         <field name="VAR" id="Jd1d?t6o6Zewb)U[in[O">digit_list</field>
