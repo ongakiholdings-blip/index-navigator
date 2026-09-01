@@ -21,7 +21,7 @@
       <block type="trade_definition_market" id="nAKp7rF^Gll{%P%/_m#[" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>
         <field name="SUBMARKET_LIST">random_index</field>
-        <field name="SYMBOL_LIST">1HZ10V</field>
+        <field name="SYMBOL_LIST">1HZ25V</field>
         <next>
           <block type="trade_definition_tradetype" id="uu(bKSYk(ZT%u,LG7t4x" deletable="false" movable="false">
             <field name="TRADETYPECAT_LIST">digits</field>
@@ -314,7 +314,7 @@
       </block>
     </statement>
   </block>
-  <block type="after_purchase" id="/oDFJ|IGtwp;kNfx;1RD" collapsed="true" x="846" y="60">
+  <block type="after_purchase" id="/oDFJ|IGtwp;kNfx;1RD" collapsed="true" x="714" y="60">
     <statement name="AFTERPURCHASE_STACK">
       <block type="controls_if" id=")L?q6^NxtS?@2w3ws85L" collapsed="true">
         <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1"></mutation>
@@ -617,7 +617,7 @@
                           </block>
                         </value>
                         <next>
-                          <block type="text_join" id="Le^jACZbh@V-3b[iFE{|">
+                          <block type="text_join" id="Le^jACZbh@V-3b[iFE{|" collapsed="true">
                             <field name="VARIABLE" id="qVmX5zUrmm#9(^,=8j9c">text5</field>
                             <statement name="STACK">
                               <block type="text_statement" id="1z89snu4F:9[ah1UWxX^">
@@ -638,10 +638,10 @@
                                       <block type="total_profit" id=",]zJ?WXMI;RP=yjK089F"></block>
                                     </value>
                                     <next>
-                                      <block type="text_statement" id="^O3Vl^xPVG{G?OITfsl." collapsed="true">
+                                      <block type="text_statement" id="^O3Vl^xPVG{G?OITfsl.">
                                         <value name="TEXT">
                                           <shadow type="text" id=":PgSjewpa6,z^j,!{aBN">
-                                            <field name="TEXT">FROSTY TRADERS HUB STRATEGY WORKED CONTRADULATIONS...... ANOTHER MOVE ANOTHER DOLLAR</field>
+                                            <field name="TEXT">STRATEGY WORKED CONTRADULATIONS...... ANOTHER MOVE ANOTHER DOLLAR</field>
                                           </shadow>
                                         </value>
                                       </block>
@@ -685,11 +685,11 @@
         <field name="NOTIFICATION_SOUND">silent</field>
         <value name="MESSAGE">
           <shadow type="text" id="!|+{KT+@3fN;K+.69[hA">
-            <field name="TEXT">AUTO C4 PRO 1 [BY💵C. E. O FREDDY] </field>
+            <field name="TEXT">AUTO C4 PRO 2 by NAVIGATOR</field>
           </shadow>
         </value>
         <next>
-          <block type="text_join" id="-gd_r[K=Q~/K?dp^BDNh" collapsed="true">
+          <block type="text_join" id="-gd_r[K=Q~/K?dp^BDNh">
             <field name="VARIABLE" id="zgaB|[y?n^GAllQO_%AW">text1</field>
             <statement name="STACK">
               <block type="text_statement" id="6%)1M/3t|AjyL82Rgv_[">
