@@ -4,6 +4,7 @@ import ErrorBoundary from '@/components/error-component/error-boundary';
 import ErrorComponent from '@/components/error-component/error-component';
 import { api_base } from '@/external/bot-skeleton';
 import { useStore } from '@/hooks/useStore';
+import IndexNavigatorLoader from '@/components/loader/index-navigator-loader';
 import './app-root.scss';
 
 const AppContent = lazy(() => import('./app-content'));
@@ -31,8 +32,11 @@ const AppRoot = () => {
     const store = useStore();
     const api_base_initialized = useRef(false);
     const [is_api_initialized, setIsApiInitialized] = useState(false);
+    const [is_loader_visible, setIsLoaderVisible] = useState(true);
 
     useEffect(() => {
+        // Keep the startup experience visible for ten seconds while initialization continues in the background.
+        const loaderTimer = setTimeout(() => setIsLoaderVisible(false), 10000);
         const timeoutId = setTimeout(() => {
             if (!is_api_initialized) {
                 setIsApiInitialized(true);
@@ -55,13 +59,16 @@ const AppRoot = () => {
         };
 
         initializeApi();
-        return () => clearTimeout(timeoutId);
+        return () => {
+            clearTimeout(loaderTimer);
+            clearTimeout(timeoutId);
+        };
     }, []);
 
-    if (!store || !is_api_initialized) return null;
+    if (!store || !is_api_initialized || is_loader_visible) return <IndexNavigatorLoader />;
 
     return (
-        <Suspense fallback={null}>
+        <Suspense fallback={<IndexNavigatorLoader />}>
             <ErrorBoundary root_store={store}>
                 <ErrorComponentWrapper />
                 <AppContent />

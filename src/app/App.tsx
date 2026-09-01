@@ -4,6 +4,7 @@ import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } 
 import { cleanupUrl, handleOAuthCallback } from '@/external/deriv-core';
 import LocalStorageSyncWrapper from '@/components/localStorage-sync-wrapper';
 import RoutePromptDialog from '@/components/route-prompt-dialog';
+import IndexNavigatorLoader from '@/components/loader/index-navigator-loader';
 import { useAccountSwitching } from '@/hooks/useAccountSwitching';
 import { useLanguageFromURL } from '@/hooks/useLanguageFromURL';
 import { StoreProvider } from '@/hooks/useStore';
@@ -36,7 +37,7 @@ const router = createBrowserRouter(
             path='/'
             element={
                     <Suspense
-                    fallback={null}
+                    fallback={<IndexNavigatorLoader />}
                 >
                     <TranslationProvider defaultLang='EN' i18nInstance={i18nInstance}>
                         <LanguageHandler>

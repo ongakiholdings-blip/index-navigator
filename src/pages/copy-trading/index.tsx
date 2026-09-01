@@ -74,6 +74,12 @@ const IconAlert = () => (
         <line x1='12' y1='16' x2='12.01' y2='16' />
     </svg>
 );
+const IconEye = () => (
+    <svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+        <path d='M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z' />
+        <circle cx='12' cy='12' r='2.8' />
+    </svg>
+);
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -155,7 +161,6 @@ const CopyTrading = observer(() => {
 
     return (
         <div className='ct2'>
-            {/* ── error toasts ──────────────────────────────────────────────── */}
             {(ct.error_messages?.length ?? 0) > 0 && (
                 <div className='ct2__toasts'>
                     {ct.error_messages.map((msg, i) => (
@@ -174,330 +179,96 @@ const CopyTrading = observer(() => {
                 </div>
             )}
 
-            {/* ── hero ─────────────────────────────────────────────────────── */}
-            <div className='ct2__hero'>
-                <div className='ct2__hero-content'>
-                    <div className='ct2__live-badge'>
-                        <span className='ct2__live-dot' />
-                        {localize('LIVE COPY TRADING')}
-                    </div>
-
-                    <h1 className='ct2__headline'>
-                        {localize('Your account, your control.')}<br />
-                        {localize('Maximize Gains with')}{' '}
-                        <span className='ct2__headline--accent'>{localize('CopyTrading')}</span>
-                    </h1>
-
-                    <p className='ct2__subheadline'>
-                        {localize(
-                            'Mirror trades from your master account to multiple client accounts in real time — automatically and instantly.'
-                        )}
-                    </p>
-
-                    <div className='ct2__stats'>
-                        <div className='ct2__stat'>
-                            <span className='ct2__stat-value'>{ct.followers.length}</span>
-                            <span className='ct2__stat-label'>{localize('LINKED ACCOUNTS')}</span>
-                        </div>
-                        <div className='ct2__stat-sep' />
-                        <div className='ct2__stat'>
-                            <span className={`ct2__stat-status ct2__stat-status--${ct.is_running ? 'running' : 'idle'}`}>
-                                <span className='ct2__stat-status-dot' />
-                                {ct.is_running ? localize('Running') : localize('Idle')}
+            <div className='ct2__panel'>
+                <header className='ct2__panel-header'>
+                    <div>
+                        <div className='ct2__title-row'>
+                            <h1>{localize('Copy Trading')}</h1>
+                            <span className={`ct2__status ct2__status--${ct.is_running ? 'active' : 'offline'}`}>
+                                <span />
+                                {ct.is_running ? localize('Active') : localize('Offline')}
                             </span>
-                            <span className='ct2__stat-label'>{localize('COPY STATUS')}</span>
                         </div>
-                        <div className='ct2__stat-sep' />
-                        <div className='ct2__stat'>
-                            <span className='ct2__stat-value'>{ct.trade_log.length}</span>
-                            <span className='ct2__stat-label'>{localize('TRADES REPLICATED')}</span>
-                        </div>
+                        <p>{localize('Copy trades from this account to your connected client accounts.')}</p>
                     </div>
-                </div>
-
-                <div className='ct2__hero-deco'>
-                    <div className='ct2__deco-ring'>
-                        <IconCopy />
-                    </div>
-                </div>
-            </div>
-
-            {/* ── body ─────────────────────────────────────────────────────── */}
-            <div className='ct2__body'>
-
-                {/* ── left column ─────────────────────────────────────────── */}
-                <div className='ct2__left'>
-
-                    {/* Demo → Real card */}
-                    <div className='ct2__card'>
-                        <div className='ct2__card-icon ct2__card-icon--blue'>
-                            <IconDemoReal />
-                        </div>
-                        <div className='ct2__card-heading'>{localize('Demo → Real')}</div>
-                        <p className='ct2__card-desc'>
-                            {localize(
-                                'Auto-detects your leader account and mirrors trades from the logged-in account using only client API tokens.'
-                            )}
-                        </p>
-
-                        <div className='ct2__leader-section' style={{ marginBottom: '0.75rem' }}>
-                            <div className='ct2__token-row' style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span className='ct2__hint-text' style={{ fontWeight: 600 }}>
-                                    {ct.is_running ? localize('Active') : ct.leader_status === 'connected' ? localize('Connected') : localize('Ready to connect')}
-                                </span>
-                                <span className={`ct2__acct-badge ct2__acct-badge--${ct.is_running ? 'demo' : ct.leader_status === 'connected' ? 'real' : 'demo'}`}>
-                                    {ct.is_running ? localize('Running') : ct.leader_status === 'connected' ? localize('Live') : localize('Standby')}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Leader token */}
-                        {ct.leader_status === 'connected' ? (
-                            <div className='ct2__leader-section'>
-                                <div className='ct2__leader-chip'>
-                                    <span className={`ct2__acct-badge ct2__acct-badge--${displayAccount?.is_virtual ? 'demo' : 'real'}`}>
-                                        {displayAccount?.is_virtual ? localize('Demo') : localize('Real')}
-                                    </span>
-                                    <span className='ct2__acct-id'>{displayAccount?.loginid}</span>
-                                    <span className='ct2__acct-bal'>
-                                        {displayAccount
-                                            ? fmtBalance(displayAccount.balance, displayAccount.currency)
-                                            : ''}
-                                    </span>
-                                    {!ct.is_running && (
-                                        <button
-                                            className='ct2__disconnect-btn'
-                                            title={localize('Disconnect leader')}
-                                            onClick={() => ct.disconnectLeader()}
-                                        >
-                                            <IconDisconnect />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className='ct2__leader-section'>
-                                <div className='ct2__token-row'>
-                                    <span className='ct2__hint-text'>
-                                        {ct.leader_status === 'connecting'
-                                            ? localize('Connecting your logged-in account automatically…')
-                                            : localize('Using your current Deriv account automatically. No demo token required.')}
-                                    </span>
-                                </div>
-                                {!ct.is_running && (
-                                    <button
-                                        className='ct2__add-btn'
-                                        onClick={handleConnectLeader}
-                                        disabled={ct.leader_status === 'connecting' || ct.is_running}
-                                    >
-                                        {ct.leader_status === 'connecting' ? localize('Connecting…') : localize('Connect')}
-                                    </button>
-                                )}
-                                {ct.leader_error && (
-                                    <span className='ct2__error-text'>{ct.leader_error}</span>
-                                )}
-                                <span className='ct2__hint-text' style={{ marginTop: '0.35rem' }}>{connectionSummary}</span>
-                            </div>
-                        )}
-
-                        <button
-                            className='ct2__primary-btn'
-                            onClick={() => void ct.startCopying()}
-                            disabled={!canStart}
-                        >
-                            <IconPlay />
-                            {localize('Start Demo → Real')}
+                    {canStop ? (
+                        <button className='ct2__start-btn ct2__start-btn--stop' onClick={() => ct.stopCopying()}>
+                            <IconStop /> {localize('Stop')}
                         </button>
+                    ) : (
+                        <button className='ct2__start-btn' onClick={() => void ct.startCopying()} disabled={!canStart}>
+                            <IconPlay /> {localize('Start')}
+                        </button>
+                    )}
+                </header>
+
+                <section className='ct2__section'>
+                    <div className='ct2__section-heading'>
+                        <h2>{localize('Client API Token')}</h2>
+                        {ct.leader_status === 'connected' ? (
+                            <span className='ct2__leader-status'>{localize('Source account connected')}</span>
+                        ) : (
+                            <button
+                                className='ct2__connect-btn'
+                                onClick={handleConnectLeader}
+                                disabled={ct.leader_status === 'connecting' || ct.is_running}
+                            >
+                                {ct.leader_status === 'connecting' ? localize('Connecting…') : localize('Connect source account')}
+                            </button>
+                        )}
                     </div>
-
-                    {/* Token Replicator card */}
-                    <div className='ct2__card'>
-                        <div className='ct2__card-icon ct2__card-icon--gold'>
-                            <IconKey />
-                        </div>
-                        <div className='ct2__card-heading'>{localize('Token Replicator')}</div>
-                        <p className='ct2__card-desc'>
-                            {localize(
-                                'Add client API tokens. When you trade, all linked accounts receive the same trade instantly.'
-                            )}
-                        </p>
-
-                        {/* Stake multiplier */}
-                        <div className='ct2__multiplier-row'>
-                            <label className='ct2__multiplier-label' htmlFor='ct2-mult'>
-                                {localize('Stake ×')}
-                            </label>
-                            <input
-                                id='ct2-mult'
-                                className='ct2__multiplier-input'
-                                type='number'
-                                min='0.01'
-                                max='100'
-                                step='0.1'
-                                value={ct.stake_multiplier}
-                                onChange={e => ct.setStakeMultiplier(parseFloat(e.target.value) || 1)}
-                                disabled={ct.is_running}
-                            />
-                            <span className='ct2__multiplier-hint'>
-                                {localize('(1.0 = same, 0.5 = half, 2.0 = double)')}
-                            </span>
-                        </div>
-
-                        <div className='ct2__token-row'>
+                    <div className='ct2__token-row'>
+                        <div className='ct2__token-input-wrap'>
                             <input
                                 className='ct2__token-input'
                                 type='text'
-                                placeholder={localize('Paste client API token…')}
+                                placeholder={localize('Paste a token with trading permission')}
                                 value={ct.new_follower_token}
                                 onChange={e => ct.setNewFollowerToken(e.target.value)}
                                 onKeyDown={handleFollowerKeyDown}
                                 disabled={ct.is_running}
                             />
-                            <button
-                                className='ct2__add-btn'
-                                onClick={() => ct.addFollower()}
-                                disabled={!ct.new_follower_token || ct.is_running}
-                            >
-                                {localize('Add')}
-                            </button>
+                            <IconEye />
                         </div>
-
-                        {canStop ? (
-                            <button
-                                className='ct2__primary-btn ct2__primary-btn--stop'
-                                onClick={() => ct.stopCopying()}
-                            >
-                                <IconStop />
-                                {localize('Stop Copying')}
-                            </button>
-                        ) : (
-                            <button
-                                className='ct2__primary-btn'
-                                onClick={() => void ct.startCopying()}
-                                disabled={!canStart}
-                            >
-                                <IconPlay />
-                                {localize('Start Copy Trading')}
-                            </button>
-                        )}
-
-                        {!canStart && !ct.is_running && (
-                            <span className='ct2__hint-text'>
-                                {ct.leader_status !== 'connected'
-                                    ? localize('Connect the leader account first.')
-                                    : connectedFollowers.length === 0
-                                        ? localize('A follower account is required before copy trading can start.')
-                                        : ''}
-                            </span>
-                        )}
+                        <button className='ct2__add-btn' onClick={() => ct.addFollower()} disabled={!ct.new_follower_token || ct.is_running}>
+                            + {localize('Add')}
+                        </button>
                     </div>
+                    <div className='ct2__multiplier-row'>
+                        <label className='ct2__multiplier-label' htmlFor='ct2-mult'>{localize('Stake multiplier')}</label>
+                        <input id='ct2-mult' className='ct2__multiplier-input' type='number' min='0.01' max='100' step='0.1'
+                            value={ct.stake_multiplier} onChange={e => ct.setStakeMultiplier(parseFloat(e.target.value) || 1)}
+                            disabled={ct.is_running} />
+                        <span className='ct2__multiplier-hint'>{localize('1.0 copies the original stake')}</span>
+                    </div>
+                    {ct.leader_error && <span className='ct2__error-text'>{ct.leader_error}</span>}
+                </section>
 
-                    {/* Trade log */}
-                    {ct.trade_log.length > 0 && (
-                        <div className='ct2__card'>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <div className='ct2__card-heading' style={{ marginBottom: 0 }}>
-                                    {localize('Trade Log')}
-                                    <span className='ct2__log-count'>({ct.trade_log.length})</span>
-                                </div>
-                                <button className='ct2__clear-btn' onClick={() => ct.clearLog()}>
-                                    {localize('Clear')}
-                                </button>
-                            </div>
-                            <div className='ct2__log'>
-                                {ct.trade_log.map(entry => (
-                                    <div key={entry.id} className='ct2__log-row'>
-                                        <span className='ct2__log-time'>{fmtDate(entry.timestamp)}</span>
-                                        <span className='ct2__log-trade'>
-                                            <strong>{entry.symbol}</strong>
-                                            {' · '}{entry.contract_type}
-                                            {' · '}{entry.duration}{entry.duration_unit}
-                                        </span>
-                                        <span className='ct2__log-stake'>
-                                            {entry.stake.toFixed(2)} {entry.currency}
-                                        </span>
-                                        <div className='ct2__log-chips'>
-                                            {entry.results.map(r => (
-                                                <span
-                                                    key={r.follower_loginid}
-                                                    className={`ct2__log-chip ct2__log-chip--${r.error ? 'err' : 'ok'}`}
-                                                    title={r.error ?? `Contract #${r.contract_id}`}
-                                                >
-                                                    {r.error ? '✕' : '✓'} {r.follower_loginid}
-                                                    {r.buy_price !== undefined && ` (${r.buy_price.toFixed(2)})`}
-                                                </span>
-                                            ))}
+                <section className='ct2__section ct2__clients'>
+                    <div className='ct2__section-heading'>
+                        <h2>{localize('Connected Clients')}</h2>
+                        <span className='ct2__client-count'>{connectedFollowers.length} <small>{ct.followers.length}</small></span>
+                    </div>
+                    {ct.followers.length === 0 ? (
+                        <div className='ct2__empty-state'>{localize('No clients yet')}</div>
+                    ) : (
+                        <div className='ct2__account-list'>
+                            {ct.followers.map(f => (
+                                <div key={f.token} className='ct2__account-row'>
+                                    <div className='ct2__account-row-left'>
+                                        <span className={`ct2__acct-status-dot ct2__acct-status-dot--${f.status}`} />
+                                        <div className='ct2__account-row-info'>
+                                            <span className='ct2__account-row-id'>{f.account?.loginid ?? maskToken(f.token)}</span>
+                                            {f.account && <span className='ct2__account-row-bal'>{fmtBalance(f.account.balance, f.account.currency)}</span>}
+                                            {f.status === 'error' && <span className='ct2__account-row-status ct2__account-row-status--err'>{f.error || localize('Error')}</span>}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    {!ct.is_running && <button className='ct2__remove-btn' title={localize('Remove')} onClick={() => ct.removeFollower(f.token)}><IconClose /></button>}
+                                </div>
+                            ))}
                         </div>
                     )}
-                </div>
-
-                {/* ── right column ─────────────────────────────────────────── */}
-                <div className='ct2__right'>
-                    <div className='ct2__card ct2__card--tall'>
-                        <div className='ct2__replicated-header'>
-                            <div className='ct2__card-icon ct2__card-icon--grey'>
-                                <IconUsers />
-                            </div>
-                            <div className='ct2__card-heading'>{localize('Replicated Accounts')}</div>
-                        </div>
-                        <div className='ct2__card-divider' />
-
-                        {ct.followers.length === 0 ? (
-                            <div className='ct2__empty-state'>
-                                <IconTag />
-                                <p>
-                                    {localize(
-                                        'No accounts linked yet. Add a client API token to start replicating trades.'
-                                    )}
-                                </p>
-                            </div>
-                        ) : (
-                            <div className='ct2__account-list'>
-                                {ct.followers.map(f => (
-                                    <div key={f.token} className='ct2__account-row'>
-                                        <div className='ct2__account-row-left'>
-                                            <span className={`ct2__acct-status-dot ct2__acct-status-dot--${f.status}`} />
-                                            <div className='ct2__account-row-info'>
-                                                <span className='ct2__account-row-id'>
-                                                    {f.account?.loginid ?? maskToken(f.token)}
-                                                </span>
-                                                {f.account && (
-                                                    <span className='ct2__account-row-bal'>
-                                                        {fmtBalance(f.account.balance, f.account.currency)}
-                                                        <span className={`ct2__acct-badge ct2__acct-badge--${f.account.is_virtual ? 'demo' : 'real'} ct2__acct-badge--sm`}>
-                                                            {f.account.is_virtual ? localize('Demo') : localize('Real')}
-                                                        </span>
-                                                    </span>
-                                                )}
-                                                {f.status === 'pending' && (
-                                                    <span className='ct2__account-row-status'>{localize('Connecting…')}</span>
-                                                )}
-                                                {f.status === 'error' && (
-                                                    <span className='ct2__account-row-status ct2__account-row-status--err'>
-                                                        {f.error || localize('Error')}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {!ct.is_running && (
-                                            <button
-                                                className='ct2__remove-btn'
-                                                title={localize('Remove')}
-                                                onClick={() => ct.removeFollower(f.token)}
-                                            >
-                                                <IconClose />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
+                </section>
             </div>
         </div>
     );
