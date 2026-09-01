@@ -4,6 +4,13 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { contract_stages } from '@/constants/contract-stage';
+import {
+    STRATEGY_DEFINITIONS,
+    STRATEGY_ORDER,
+    isWinningDigit,
+    isCautionCluster,
+    type StrategyId,
+} from '@/constants/over-under-strategies';
 import { localize } from '@deriv-com/translations';
 import './over-under-engine.scss';
 
@@ -17,9 +24,9 @@ const DIGIT_WINDOW  = 1000;
 /** Digits that act as entry triggers */
 const ENTRY_DIGITS = new Set([4, 5]);
 
-interface Market { symbol: string; label: string; short: string; code: string; }
+export interface Market { symbol: string; label: string; short: string; code: string; }
 
-const MARKETS: Market[] = [
+export const MARKETS: Market[] = [
     { symbol: '1HZ10V',  label: 'Volatility 10 (1s) Index',  short: 'V10 (1s)',  code: '10\n(1s)'  },
     { symbol: '1HZ25V',  label: 'Volatility 25 (1s) Index',  short: 'V25 (1s)',  code: '25\n(1s)'  },
     { symbol: '1HZ50V',  label: 'Volatility 50 (1s) Index',  short: 'V50 (1s)',  code: '50\n(1s)'  },
@@ -112,6 +119,9 @@ interface EngineState {
     overRoundProfit:        number | null;
     underRoundProfit:       number | null;
     roundCounter:           number;
+    // AI strategy engine
+    strategyId:             StrategyId;
+    consecutiveLosses:      number;
 }
 
 function makeInitState(
@@ -120,6 +130,7 @@ function makeInitState(
     tp: number,
     sl: number,
     useEntry: boolean,
+    strategyId: StrategyId = 'dual',
 ): EngineState {
     return {
         running: false,
@@ -150,6 +161,8 @@ function makeInitState(
         overRoundProfit: null,
         underRoundProfit: null,
         roundCounter: 0,
+        strategyId,
+        consecutiveLosses: 0,
     };
 }
 
@@ -166,6 +179,16 @@ const OverUnderEngine: React.FC = observer(() => {
     const [symbol, setSymbol]         = useState('1HZ10V');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(true);
+    // AI strategy engine — 'dual' keeps the original Over 5 / Under 4 pair,
+    // any other value runs a single-leg strategy using the recommendations
+    // from the Strategy tab (entry filter, recovery method, stake sizing).
+    const [strategyId, setStrategyId] = useState<StrategyId>('dual');
+    const [strategyOpen, setStrategyOpen] = useState(false);
+    const [singleWins, setSingleWins]     = useState(0);
+    const [singleLosses, setSingleLosses] = useState(0);
+    const [singleStake, setSingleStake]   = useState(0.5);
+    const [lastSingleResult, setLastSingleResult] = useState<'won' | 'lost' | null>(null);
+    const [lastSkipReason, setLastSkipReason] = useState<string | null>(null);
 
     // Display state
     const [isRunning, setIsRunning]                       = useState(false);
@@ -189,7 +212,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
-    const eng              = useRef<EngineState>(makeInitState(stake, martingale, takeProfit, stopLoss, entryMode));
+    const eng              = useRef<EngineState>(makeInitState(stake, martingale, takeProfit, stopLoss, entryMode, strategyId));
     const msgSub           = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveSub       = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveTickId    = useRef<string | null>(null);
