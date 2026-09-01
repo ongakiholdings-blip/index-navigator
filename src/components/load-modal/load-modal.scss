@@ -1,6 +1,67 @@
 @use 'components/shared/styles/mixins' as *;
 
 #modal_root {
+    .dc-modal__container_load-strategy {
+        max-height: calc(100vh - 4rem) !important;
+
+        .dc-modal-body {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .dc-tabs {
+            display: grid;
+            flex: 1;
+            grid-template-rows: auto minmax(0, 1fr);
+            min-height: 0;
+        }
+
+        .dc-tabs__content {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .load-strategy__container--has-footer,
+        .load-strategy__local-preview,
+        .load-strategy__preview-workspace {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .load-strategy__local-preview {
+            flex-direction: column;
+        }
+
+        .load-strategy__local-preview .load-strategy__preview-workspace {
+            height: auto;
+            margin: 0;
+        }
+
+        #load-strategy__blockly-container {
+            display: block;
+            position: relative;
+            flex: 1;
+            height: auto !important;
+
+            .injectionDiv {
+                position: absolute !important;
+                inset: 0;
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+            .blocklySvg {
+                width: 100% !important;
+                height: 100% !important;
+            }
+        }
+    }
+
     .load-strategy {
         &__recent {
             display: flex;
@@ -151,8 +212,10 @@
         }
 
         &__container {
+            height: 100%;
+
             &--has-footer {
-                height: calc(80vh - 21rem);
+                height: 100%;
                 margin-top: -1rem;
             }
         }
@@ -166,5 +229,28 @@
         min-height: unset;
         height: unset;
         margin: 0;
+    }
+}
+
+body.theme--light {
+    #modal_root {
+        .dc-modal__container_load-strategy {
+            background: #f7fdfd;
+
+            .load-strategy__local-preview,
+            .load-strategy__preview-workspace,
+            #load-strategy__blockly-container,
+            #load-strategy__blockly-container .injectionDiv {
+                background:
+                    linear-gradient(rgb(231 249 248 / 86%), rgb(220 244 243 / 92%)),
+                    linear-gradient(90deg, rgb(15 159 162 / 8%) 1px, transparent 1px),
+                    linear-gradient(rgb(15 159 162 / 8%) 1px, transparent 1px);
+                background-size: auto, 2.4rem 2.4rem, 2.4rem 2.4rem;
+            }
+
+            #load-strategy__blockly-container .blocklyMainBackground {
+                fill: #dff4f3 !important;
+            }
+        }
     }
 }

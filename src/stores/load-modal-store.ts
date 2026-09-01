@@ -447,8 +447,7 @@ export default class LoadModalStore {
                 this.local_workspace.dispose();
                 this.local_workspace = null;
             }
-            this.loadStrategyOnModalLocalPreview(load_options);
-            this.setOpenButtonDisabled(false);
+            await this.loadStrategyOnModalLocalPreview(load_options);
         });
 
         reader.readAsText(file);
@@ -524,6 +523,7 @@ export default class LoadModalStore {
         const injectWorkspace = { ...inject_workspace_options, theme: window?.Blockly?.Themes?.zelos_renderer };
 
         await waitForDomElement('#load-strategy__blockly-container');
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
         const ref_preview = document.getElementById('load-strategy__blockly-container');
         if (!this.local_workspace) this.local_workspace = await window.Blockly.inject(ref_preview, injectWorkspace);
 
@@ -536,8 +536,12 @@ export default class LoadModalStore {
         /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
         /* [/AI] */
 
-        const result = await load({ ...load_options, show_snackbar: false });
+        await load({ ...load_options, show_snackbar: false });
         /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
         /* [/AI] */
+
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+        window.Blockly.svgResize(this.local_workspace);
+        this.local_workspace.cleanUp();
     };
 }

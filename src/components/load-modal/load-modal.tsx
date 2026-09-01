@@ -74,8 +74,8 @@ const LoadModal: React.FC = observer(() => {
         <Modal
             title={header_text}
             className='load-strategy'
-            width='1000px'
-            height='80vh'
+            width='calc(100vw - 4rem)'
+            height='calc(100vh - 4rem)'
             is_open={is_load_modal_open}
             toggleModal={() => {
                 toggleLoadModal();
