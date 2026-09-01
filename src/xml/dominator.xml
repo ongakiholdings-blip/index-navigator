@@ -25,7 +25,7 @@
     <variable id="7JojWW:8}EgD*|lq;S_$">list</variable>
     <variable id="DNhF.v}O9v+rRicP?%xS">text</variable>
   </variables>
-  <block type="trade_definition" id="a776q.sLW}$8Uj*t9i*V" deletable="false" x="0" y="60">
+  <block type="trade_definition" id="a776q.sLW}$8Uj*t9i*V" deletable="false" x="0" y="0">
     <statement name="TRADE_OPTIONS">
       <block type="trade_definition_market" id="@~-wkYABRgD3ZJp3j^3!" deletable="false" movable="false">
         <field name="MARKET_LIST">synthetic_index</field>
@@ -64,15 +64,15 @@
         <field name="VAR" id="a6O1@UOPwLx_RSp+20T$">prediction</field>
         <value name="VALUE">
           <block type="math_number" id="[Ml_-*-#$48Y(h1sJYM)">
-            <field name="NUM">1</field>
+            <field name="NUM">2</field>
           </block>
         </value>
         <next>
           <block type="variables_set" id="mM5l[@:;xqcZl%ZdUF?%">
             <field name="VAR" id="h1AEFFgQ^;#{C^aw/nBz">RECOVERY DIGIT</field>
             <value name="VALUE">
-              <block type="math_number" id="e38Jm`G-b;5E,wLhiJYq">
-                <field name="NUM">2</field>
+              <block type="math_number" id=";~=t7y]hM-/Hs7o_-ClJ">
+                <field name="NUM">3</field>
               </block>
             </value>
             <next>
@@ -143,13 +143,13 @@
                                               <block type="text_join" id="5({+h(QW)]3NU?n8@_Qz" collapsed="true">
                                                 <field name="VARIABLE" id="DNhF.v}O9v+rRicP?%xS">text</field>
                                                 <statement name="STACK">
-                                                  <block type="text_statement" id="/)V|g#}{wjwu9m?4Nzkx" collapsed="true">
+                                                  <block type="text_statement" id="/)V|g#}{wjwu9m?4Nzkx">
                                                     <value name="TEXT">
                                                       <shadow type="text" id=";h/[-HZLM}P@BADkV2g+">
                                                         <field name="TEXT"></field>
                                                       </shadow>
                                                       <block type="text" id="+Ya(AI#O@Y9GP-]i4(1=">
-                                                        <field name="TEXT">FROSTY BOTS</field>
+                                                        <field name="TEXT">NAVIGATOR..BOT...:::::::</field>
                                                       </block>
                                                     </value>
                                                     <next>
@@ -466,7 +466,7 @@
       </block>
     </statement>
   </block>
-  <block type="after_purchase" id="leXna=dZ|?aw|-]c1g=@" collapsed="true" x="714" y="60">
+  <block type="after_purchase" id="leXna=dZ|?aw|-]c1g=@" collapsed="true" x="714" y="0">
     <statement name="AFTERPURCHASE_STACK">
       <block type="controls_if" id="/e(Cu.:(caISq1%Zuw*x" collapsed="true">
         <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1"></mutation>
@@ -610,7 +610,7 @@
           </block>
         </statement>
         <next>
-          <block type="controls_if" id="OMy^Eu]f(Bh/lX{tOM-}">
+          <block type="controls_if" id="OMy^Eu]f(Bh/lX{tOM-}" collapsed="true">
             <mutation xmlns="http://www.w3.org/1999/xhtml" elseif="1"></mutation>
             <value name="IF0">
               <block type="contract_check_result" id="C#a*J~LN2AN2`[w[Ad%u">
@@ -758,7 +758,7 @@
               </block>
             </value>
             <statement name="DO1">
-              <block type="controls_if" id="q.qVz8V.y,(!Q#MKO?cH" collapsed="true">
+              <block type="controls_if" id="q.qVz8V.y,(!Q#MKO?cH">
                 <mutation xmlns="http://www.w3.org/1999/xhtml" else="1"></mutation>
                 <value name="IF0">
                   <block type="logic_compare" id="n=;m!qqYT|_EK{,@|r#]">
@@ -814,13 +814,13 @@
                           <block type="text_join" id="`aya],mMTl*~VK{+1Hv2" collapsed="true">
                             <field name="VARIABLE" id="ozM3Au`#iSz-YI3N$)O)">text5</field>
                             <statement name="STACK">
-                              <block type="text_statement" id="$F5REgh(h}4-d.P[;Wy@" collapsed="true">
+                              <block type="text_statement" id="$F5REgh(h}4-d.P[;Wy@">
                                 <value name="TEXT">
                                   <shadow type="text" id="S9A~:mS,49tTZ=1/e;(e">
                                     <field name="TEXT"></field>
                                   </shadow>
                                   <block type="text" id="k1fe0WhPTP!)k!{:zfX*">
-                                    <field name="TEXT">FROSTY TRADERS BOT WORK SMART NOT HARD </field>
+                                    <field name="TEXT">NAVIGATOR..BOT...:::::::</field>
                                   </block>
                                 </value>
                                 <next>
@@ -884,7 +884,7 @@
       </block>
     </statement>
   </block>
-  <block type="before_purchase" id="zvZA6zCqb3jc9L!VOb2q" collapsed="true" deletable="false" x="0" y="1496">
+  <block type="before_purchase" id="zvZA6zCqb3jc9L!VOb2q" collapsed="true" deletable="false" x="0" y="1436">
     <statement name="BEFOREPURCHASE_STACK">
       <block type="variables_set" id="`{MH*b?Bs[o@M#B:sc*Q" collapsed="true">
         <field name="VAR" id="!T,V6]5_UQwL4;[wVu,s">tradesCounter</field>
@@ -908,11 +908,11 @@
         </value>
         <next>
           <block type="notify" id="y8D)3}d.A][=3rHKpv9:" collapsed="true">
-            <field name="NOTIFICATION_TYPE">warn</field>
+            <field name="NOTIFICATION_TYPE">info</field>
             <field name="NOTIFICATION_SOUND">silent</field>
             <value name="MESSAGE">
               <shadow type="text" id="-J2`Ru+x5?aixepZy_gv">
-                <field name="TEXT">FROSTYDBOT</field>
+                <field name="TEXT">DOMINTOR RUNNING</field>
               </shadow>
             </value>
             <next>

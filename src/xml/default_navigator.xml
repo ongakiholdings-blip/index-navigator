@@ -16,7 +16,7 @@
         <next>
           <block type="trade_definition_tradetype" id="OmegZc~U-*`C4K1Z!EEC" deletable="false" movable="false">
             <field name="TRADETYPECAT_LIST">digits</field>
-            <field name="TRADETYPE_LIST">matchesdiffers</field>
+            <field name="TRADETYPE_LIST">evenodd</field>
             <next>
               <block type="trade_definition_contracttype" id="{j0u@,dUiVNr1Pu:lqeq" deletable="false" movable="false">
                 <field name="TYPE_LIST">both</field>
@@ -93,7 +93,7 @@
     </statement>
     <statement name="SUBMARKET">
       <block type="trade_definition_tradeoptions" id="8ZhmYSe}26jy60zH$LW3">
-        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="true"></mutation>
+        <mutation xmlns="http://www.w3.org/1999/xhtml" has_first_barrier="false" has_second_barrier="false" has_prediction="false"></mutation>
         <field name="DURATIONTYPE_LIST">t</field>
         <value name="DURATION">
           <shadow type="math_number_positive" id="`e).V?,kZrO`0d?(XyX4">
@@ -107,11 +107,6 @@
           <block type="variables_get" id="m:o|@T54{W`^4XINM{C5">
             <field name="VAR" id="xd#F6X!PKV4M@A!Ya@5R">stake</field>
           </block>
-        </value>
-        <value name="PREDICTION">
-          <shadow type="math_number_positive" id="Mpg;9[W9B#ol`%Czj=g+" inline="true">
-            <field name="NUM">1</field>
-          </shadow>
         </value>
       </block>
     </statement>
@@ -221,7 +216,7 @@
                           <block type="text_statement" id="?XgaPo+8wAhV+}Zc*IV?" collapsed="true">
                             <value name="TEXT">
                               <shadow type="text" id="ct+4#w+CnZ-!FqvVoo?N">
-                                <field name="TEXT">FROSTY VERSION</field>
+                                <field name="TEXT">NAVIGATOR BOT::::</field>
                               </shadow>
                             </value>
                           </block>
@@ -277,20 +272,20 @@
               </block>
             </value>
             <statement name="DO1">
-              <block type="text_join" id="l!4r+~p;~g_`5p6[bm}G" collapsed="true">
+              <block type="text_join" id="l!4r+~p;~g_`5p6[bm}G">
                 <field name="VARIABLE" id="M=oYE2X!9-4!as:|`ggG">text</field>
                 <statement name="STACK">
                   <block type="text_statement" id="VSD}{!}@Q2s/V0pGq|U^" collapsed="true">
                     <value name="TEXT">
                       <shadow type="text" id="=Cbq,MyU0u0!.OP`gSVG">
-                        <field name="TEXT">SORRY WE WILL NEXT TRADE </field>
+                        <field name="TEXT">SORRY WE WILL WIN NEXT TRADE </field>
                       </shadow>
                     </value>
                     <next>
                       <block type="text_statement" id="9!D4j}HrG~-{%J}xzARC" collapsed="true">
                         <value name="TEXT">
                           <shadow type="text" id="#QyMg4/)7LE)z;j/O6ey">
-                            <field name="TEXT">FROSTY VERSION </field>
+                            <field name="TEXT">NAVIGATOR BOT::::</field>
                           </shadow>
                         </value>
                         <next>
@@ -342,7 +337,7 @@
   <block type="before_purchase" id="wG:`z7m$5=Rn:He8i*YC" deletable="false" x="0" y="880">
     <statement name="BEFOREPURCHASE_STACK">
       <block type="purchase" id="4auBn[LgSfl~BFB4vAkQ">
-        <field name="PURCHASE_LIST">DIGITMATCH</field>
+        <field name="PURCHASE_LIST">DIGITEVEN</field>
       </block>
     </statement>
   </block>

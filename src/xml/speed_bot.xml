@@ -43,7 +43,7 @@
             <field name="TRADETYPE_LIST">overunder</field>
             <next>
               <block type="trade_definition_contracttype" id="R|7eJ^85+SiP`z1[Z)^O" deletable="false" movable="false">
-                <field name="TYPE_LIST">DIGITOVER</field>
+                <field name="TYPE_LIST">both</field>
                 <next>
                   <block type="trade_definition_candleinterval" id="HK(?MF0V2Ix!gIo5`K3L" deletable="false" movable="false">
                     <field name="CANDLEINTERVAL_LIST">60</field>
@@ -115,7 +115,7 @@
                             </value>
                             <next>
                               <block type="procedures_callnoreturn" id="eP/^XD=g@h_l8kgpnWV`" collapsed="true">
-                                <mutation xmlns="http://www.w3.org/1999/xhtml" name="Daily Profit's System">
+                                <mutation xmlns="http://www.w3.org/1999/xhtml" name="index_navigator system">
                                   <arg name="Target Profit"></arg>
                                   <arg name="Stop Loss"></arg>
                                   <arg name="First Stake"></arg>
@@ -197,7 +197,7 @@
       <block type="controls_if" id="!RqD2`C:Q/FssWS`ZiMX" collapsed="true">
         <value name="IF0">
           <block type="procedures_callreturn" id="$f6^)PtfgsT51EC]w6ar">
-            <mutation xmlns="http://www.w3.org/1999/xhtml" name="Daily Profit's Trade Again">
+            <mutation xmlns="http://www.w3.org/1999/xhtml" name="index navigator">
               <arg name="[Win Result]"></arg>
               <arg name="Detail Profit"></arg>
             </mutation>
@@ -231,8 +231,7 @@
       <arg name="[Win Result]" varid="BPsrb}:o?nCP7t]1@Rfq"></arg>
       <arg name="Detail Profit" varid="dK=o~;7~9dr8wCZ%hyh,"></arg>
     </mutation>
-    <field name="NAME">Daily Profit's Trade Again</field>
-    <comment pinned="false" h="200" w="200">FRUITFELLA's Management ver. 3.0</comment>
+    <field name="NAME">index navigator</field>
     <statement name="STACK">
       <block type="math_change" id="nsSpz1d}6`C?g#KF*i;T">
         <field name="VAR" id="ddH0?/^#_8u1VjM/!`t|">Profit</field>
@@ -855,15 +854,14 @@
       <arg name="Martingale Level" varid="X#UMfnUF|OeyRcxIN~Y4"></arg>
       <arg name="Do Martingale After" varid="-sYH8a;P)v}g?!iatjL,"></arg>
     </mutation>
-    <field name="NAME">Daily Profit's System</field>
-    <comment pinned="false" h="80" w="160">Describe this function...</comment>
+    <field name="NAME">index_navigator system</field>
     <statement name="STACK">
       <block type="notify" id="-%6nFwy*F:aM*#k^1y7a">
         <field name="NOTIFICATION_TYPE">info</field>
         <field name="NOTIFICATION_SOUND">silent</field>
         <value name="MESSAGE">
           <block type="text" id="]:kuR~GaXPw7DW0I[;?+">
-            <field name="TEXT">Bot Starts! Good Luck! - Daily Profit Corp</field>
+            <field name="TEXT">Bot Starts! Good Luck!</field>
           </block>
         </value>
         <next>
