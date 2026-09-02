@@ -27,6 +27,10 @@ export interface StrategyDefinition {
     recovery: RecoveryMethod;
     /** Recommended base stake as a percentage of account balance */
     recommendedStakePct: number;
+    /** Take-profit target in account currency units for this strategy */
+    takeProfit: number;
+    /** Stop-loss limit in account currency units for this strategy */
+    stopLoss: number;
     /** Digits that, when they appear, should pause/skip entry (unfavourable cluster) */
     cautionDigits: number[];
     /** Max combined frequency (%) of cautionDigits over the recent window before pausing entry */
@@ -48,6 +52,8 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
         risk: 'Low',
         recovery: 'martingale',
         recommendedStakePct: 2,
+        takeProfit: 5,
+        stopLoss: 10,
         cautionDigits: [0, 1],
         cautionThresholdPct: 30,
         intro:
@@ -72,6 +78,8 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
         risk: 'Low–Medium',
         recovery: 'martingale',
         recommendedStakePct: 1.5,
+        takeProfit: 4,
+        stopLoss: 8,
         cautionDigits: [0, 1, 2],
         cautionThresholdPct: 35,
         intro:
@@ -96,6 +104,8 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
         risk: 'Low',
         recovery: 'martingale',
         recommendedStakePct: 2,
+        takeProfit: 5,
+        stopLoss: 10,
         cautionDigits: [8, 9],
         cautionThresholdPct: 30,
         intro:
@@ -120,6 +130,8 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
         risk: 'Low–Medium',
         recovery: 'martingale',
         recommendedStakePct: 1,
+        takeProfit: 4,
+        stopLoss: 8,
         cautionDigits: [7, 8, 9],
         cautionThresholdPct: 40,
         intro:
@@ -144,6 +156,8 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
         risk: 'Medium',
         recovery: 'dalembert',
         recommendedStakePct: 0.5,
+        takeProfit: 3,
+        stopLoss: 6,
         cautionDigits: [1, 3, 5, 7, 9],
         cautionThresholdPct: 55,
         intro:
@@ -168,6 +182,8 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
         risk: 'Medium',
         recovery: 'dalembert',
         recommendedStakePct: 0.5,
+        takeProfit: 3,
+        stopLoss: 6,
         cautionDigits: [0, 2, 4, 6, 8],
         cautionThresholdPct: 55,
         intro:
@@ -184,6 +200,52 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
 };
 
 export const STRATEGY_ORDER: Exclude<StrategyId, 'dual'>[] = ['over1', 'over2', 'under8', 'under7', 'even', 'odd'];
+
+export function getStrategyEntryDigits(id: StrategyId): number[] {
+    switch (id) {
+        case 'dual': return [4, 5];
+        case 'over1': return [1, 3, 4, 5, 6];
+        case 'over2': return [2];
+        case 'under8': return [8];
+        case 'under7': return [7];
+        case 'even': return [0, 2, 4, 6, 8];
+        case 'odd': return [1, 3, 5, 7, 9];
+        default: return [4, 5];
+    }
+}
+
+export function matchesStrategyEntrySequence(id: StrategyId, recentDigits: number[]): boolean {
+    if (recentDigits.length < 2) return false;
+    const prev = recentDigits[recentDigits.length - 2];
+    const current = recentDigits[recentDigits.length - 1];
+
+    switch (id) {
+        case 'over1':
+            return prev === 1 && [3, 4, 5, 6].includes(current);
+        case 'over2':
+            return [0, 1, 2].includes(prev) && [3, 4, 5, 6].includes(current);
+        case 'under8':
+            return prev === 8 && [5, 6, 7, 8, 9].includes(current);
+        case 'under7':
+            return [7, 8, 9].includes(prev) && [3, 6, 7, 8, 9].includes(current);
+        case 'even': {
+            if (recentDigits.length < 5) return false;
+            const lastFive = recentDigits.slice(-5);
+            return lastFive.slice(0, 3).every(d => d % 2 === 1)
+                && lastFive[3] !== undefined
+                && lastFive[4] % 2 === 0;
+        }
+        case 'odd': {
+            if (recentDigits.length < 5) return false;
+            const lastFive = recentDigits.slice(-5);
+            return lastFive.slice(0, 3).every(d => d % 2 === 0)
+                && lastFive[3] !== undefined
+                && lastFive[4] % 2 === 1;
+        }
+        default:
+            return false;
+    }
+}
 
 /** Returns true if the digit is a "winning" digit for the given strategy. */
 export function isWinningDigit(id: Exclude<StrategyId, 'dual'>, digit: number): boolean {

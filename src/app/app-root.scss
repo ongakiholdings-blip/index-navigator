@@ -1,8 +1,9 @@
 .app-root {
-    height: 100vh;
+    min-height: 100vh;
+    height: auto;
     width: 100vw;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     font-size: 1.6rem;
 
