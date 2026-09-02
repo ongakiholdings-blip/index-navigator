@@ -424,9 +424,11 @@
         margin-inline-start: 0;
         margin-inline-end: auto;
 
-        // Fill the full tab-content height so nothing is wasted below the controls.
-        height: 100%;
-        min-height: 0;
+        // Let the engine grow naturally so all controls remain reachable and the
+        // page can scroll instead of clipping the lower action buttons.
+        height: auto;
+        min-height: 100%;
+        overflow: visible;
     }
 
     // ── header / digit strip ────────────────────────────────────────────────
