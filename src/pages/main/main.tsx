@@ -88,7 +88,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'chart', 'copy_trading', 'analysis', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'signal_zone', 'chart', 'copy_trading', 'analysis', 'tutorial'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -438,6 +438,26 @@ const AppWrapper = observer(() => {
                                 id='id-over-under-engine'
                             >
                                 <OverUnderEngine />
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedMagnifyingGlassPlusCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Signal-Zone' />
+                                    </>
+                                }
+                                id='id-signal-zone'
+                            >
+                                <iframe
+                                    src='https://indexnavigator.vercel.app'
+                                    title='Signal-Zone'
+                                    style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                                    allow='clipboard-read; clipboard-write'
+                                />
                             </div>
                             <div
                                 label={
