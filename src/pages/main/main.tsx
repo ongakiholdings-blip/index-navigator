@@ -88,7 +88,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'signal_zone', 'chart', 'copy_trading', 'analysis', 'tutorial'];
+    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'signal_zone', 'chart', 'deriv_t_view', 'copy_trading', 'analysis', 'tutorial'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -481,6 +481,26 @@ const AppWrapper = observer(() => {
                                 >
                                     <ChartWrapper show_digits_stats={false} />
                                 </Suspense>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedChartLineCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='Deriv-T.View' />
+                                    </>
+                                }
+                                id='id-deriv-t-view'
+                            >
+                                <iframe
+                                    src='https://charts.deriv.com/deriv'
+                                    title='Deriv-T.View'
+                                    style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                                    allow='clipboard-read; clipboard-write'
+                                />
                             </div>
                             <div
                                 label={
