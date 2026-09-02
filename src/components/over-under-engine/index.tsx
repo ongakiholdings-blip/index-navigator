@@ -920,8 +920,8 @@ const OverUnderEngine: React.FC = observer(() => {
             {/* ── digit strip ── */}
             <div className='oue__header'>
                 <div className='oue__title'>
-                    <span className='oue__title-icon'>⚡</span>
-                    <span>{isSingleStrategyMode ? `${activeStrategyDef?.label.toUpperCase()} ENGINE` : 'OVER 5 / UNDER 4 ENGINE'}</span>
+                    <span className='oue__title-icon'>🤖</span>
+                    <span>{isSingleStrategyMode ? `${activeStrategyDef?.label.toUpperCase()} AI BOT` : 'AI BOTS'}</span>
 
                     {/* entry-mode indicator badge */}
                     {entryMode && (
