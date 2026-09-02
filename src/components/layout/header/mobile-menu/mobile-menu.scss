@@ -28,6 +28,32 @@
         justify-content: space-between;
         align-items: center;
         width: 100%;
+        min-height: 5.6rem;
+        background: var(--general-main-1);
+        border-bottom: 1px solid var(--general-section-1);
+
+        &__brand {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            gap: 0.8rem;
+
+            .app-header__logo-mark {
+                animation: none;
+            }
+            .app-header__logo-text {
+                font-size: 1.5rem;
+                max-width: 15rem;
+            }
+        }
+
+        &__title {
+            color: var(--text-prominent);
+            white-space: nowrap;
+            opacity: 0.9;
+            padding-inline-start: 0.8rem;
+            border-inline-start: 1px solid var(--brand-secondary, var(--text-prominent));
+        }
 
         &__language {
             display: flex;
@@ -81,6 +107,11 @@
                 cursor: pointer;
                 width: 100%;
 
+                .deriv-text {
+                    color: var(--text-prominent) !important;
+                    font-weight: 700;
+                }
+
                 .deriv-toggle-switch {
                     margin-left: auto;
                     margin-right: 1.6rem;
@@ -111,7 +142,7 @@
             &__icons {
                 g > path,
                 path {
-                    fill: var(--text-prominent);
+                    fill: var(--text-prominent) !important;
                 }
             }
         }

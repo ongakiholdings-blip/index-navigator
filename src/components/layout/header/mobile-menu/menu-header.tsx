@@ -3,6 +3,7 @@ import { ComponentProps } from 'react';
 import { LabelPairedGlobeSmRegularIcon } from '@deriv/quill-icons';
 import { useTranslations } from '@deriv-com/translations';
 import { Text, useDevice } from '@deriv-com/ui';
+import { LogoMark } from '../../app-logo/LogoMark';
 
 type TMenuHeader = {
     hideLanguageSetting: boolean;
@@ -17,12 +18,12 @@ const MenuHeader = ({ hideLanguageSetting, openLanguageSetting }: TMenuHeader) =
 
     return (
         <div className='mobile-menu__header'>
-            {/* [AI] Show a plain "Settings" title instead of the logo + app name mark */}
-            <Text size={isDesktop ? 'sm' : 'md'} weight='bold'>
-                {localize('Settings')}
-            </Text>
-            {/* [/AI] */}
-
+            <div className='mobile-menu__header__brand'>
+                <LogoMark height={28} />
+                <Text className='mobile-menu__header__title' size={isDesktop ? 'xs' : 'sm'} weight='bold'>
+                    {localize('Settings')}
+                </Text>
+            </div>
             {!hideLanguageSetting && (
                 <button
                     className='mobile-menu__header__language items-center'
