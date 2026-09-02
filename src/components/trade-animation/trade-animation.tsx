@@ -2,16 +2,13 @@ import React from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import ContractResultOverlay from '@/components/contract-result-overlay';
-import { DBOT_TABS } from '@/constants/bot-contents';
 import { contract_stages } from '@/constants/contract-stage';
 import { useStore } from '@/hooks/useStore';
 import { LabelPairedPlayLgFillIcon, LabelPairedSquareLgFillIcon } from '@deriv/quill-icons/LabelPaired';
-import { Localize, localize } from '@deriv-com/translations';
-import { useDevice } from '@deriv-com/ui';
+import { Localize } from '@deriv-com/translations';
 /* [AI] - Analytics event tracking removed - see migrate-docs/MONITORING_PACKAGES.md for re-implementation guide */
 /* [/AI] */
 import Button from '../shared_ui/button';
-import Tooltip from '../shared_ui/tooltip/tooltip';
 import CircularWrapper from './circular-wrapper';
 import ContractStageText from './contract-stage-text';
 import './run-panel-tooltip.scss';
@@ -22,10 +19,7 @@ type TTradeAnimation = {
 };
 
 const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnimation) => {
-    const { dashboard, run_panel, summary_card, blockly_store } = useStore();
-    const { active_tab } = dashboard;
-    const { has_active_bot, has_saved_bots } = blockly_store;
-    const { isMobile } = useDevice();
+    const { run_panel, summary_card, blockly_store } = useStore();
 
     const { is_contract_completed, profit } = summary_card;
     const { contract_stage, is_stop_button_visible, is_stop_button_disabled, onRunButtonClick, onStopBotClick } =
@@ -98,20 +92,7 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
         }
     }
 
-    // Check if there are no active or saved bots
-    const has_no_bots = !has_active_bot && !has_saved_bots;
-    const is_bot_builder_tab = active_tab === DBOT_TABS.BOT_BUILDER;
-
-    // Disable the RUN button if:
-    // 1. There are no active or saved bots AND the user is not in the bot builder tab
-    const should_disable_run = has_no_bots && !is_bot_builder_tab;
-
-    const is_disabled = is_stop_button_visible ? false : shouldDisable || should_disable_run;
-
-    // Show the tooltip when:
-    // 1. The user is NOT in the bot builder tab, AND
-    // 2. There are no bots
-    const should_show_tooltip = !is_stop_button_visible && !is_bot_builder_tab && has_no_bots;
+    const is_disabled = is_stop_button_visible ? false : shouldDisable;
 
     const button_props = React.useMemo(() => {
         if (is_stop_button_visible && !is_stop_button_disabled) {
@@ -130,10 +111,6 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
         };
     }, [is_stop_button_visible, is_stop_button_disabled]);
     const show_overlay = should_show_overlay && is_contract_completed;
-
-    // Fix TypeScript error by ensuring active_tab is a number
-    // Use a fallback to dashboard if active_tab is undefined
-    const safeActiveTab = typeof active_tab === 'number' ? active_tab : DBOT_TABS.DASHBOARD;
 
     // Function to determine tooltip alignment based on run panel position
     const determineTooltipAlignment = (): string => {
@@ -166,34 +143,7 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
 
     return (
         <div className={classNames('animation__wrapper', className)}>
-            {should_show_tooltip ? (
-                <div className='run__button_wrapper'>
-                    <Tooltip
-                        alignment={determineTooltipAlignment()}
-                        message={localize('The Run button is disabled because no Bot has been created yet.')}
-                        icon='info'
-                        className='qs__tooltip'
-                    />
-                    <div style={{ opacity: 0.5, marginLeft: '8px' }}>
-                        <Button
-                            is_disabled={true}
-                            className={button_props.class}
-                            id={button_props.id}
-                            icon={button_props.icon}
-                            onClick={() => {
-                                // Disabled button, no action
-                            }}
-                            has_effect
-                            {...(is_stop_button_visible || !is_unavailable_for_payment_agent
-                                ? { primary: true }
-                                : { green: true })}
-                        >
-                            {button_props.text}
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <Button
+            <Button
                     is_disabled={(is_disabled && !is_unavailable_for_payment_agent) || contract_stage === 3}
                     className={button_props.class}
                     id={button_props.id}
@@ -215,7 +165,6 @@ const TradeAnimation = observer(({ className, should_show_overlay }: TTradeAnima
                 >
                     {button_props.text}
                 </Button>
-            )}
             <div
                 className={classNames('animation__container', className, {
                     'animation--running': contract_stage > 0,
