@@ -227,30 +227,37 @@
 
 .oue__strategy-label {
     color: var(--text-less-prominent);
+    font-size: 0.88rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
 }
 
 .oue__strategy-pill {
-    padding: 0.35rem 0.7rem;
+    padding: 0.45rem 0.8rem;
     border-radius: 999px;
     background: rgba(32, 212, 212, 0.12);
     border: 1px solid rgba(32, 212, 212, 0.5);
     color: #20d4d4;
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
 }
 
 .oue__strategy-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.55rem;
 }
 
 .oue__strategy-tab {
-    padding: 0.45rem 0.8rem;
+    padding: 0.55rem 0.9rem;
     border: 1px solid var(--general-section-2);
     border-radius: 999px;
     background: transparent;
     color: var(--text-general);
-    font-size: 0.72rem;
-    font-weight: 700;
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
     cursor: pointer;
     transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
 }
@@ -272,9 +279,10 @@
 
 .oue__strategy-prompt {
     margin: 0;
-    font-size: 0.84rem;
-    line-height: 1.55;
+    font-size: 0.9rem;
+    line-height: 1.6;
     color: var(--text-general);
+    font-weight: 800;
 }
 
 .oue__single-stats {
@@ -282,11 +290,13 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     color: var(--text-less-prominent);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 800;
 }
 
 .oue__single-stats strong {
     color: var(--text-general);
+    font-weight: 900;
 }
 
 .oue__strategy-skip {
@@ -411,7 +421,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 1.2rem 1rem 2rem;
+    padding: 1.2rem 1rem 5rem;
     box-sizing: border-box;
     color: var(--text-general);
     max-width: 840px;
@@ -874,22 +884,23 @@
     }
 
     &__panel-name {
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         font-weight: 900;
         letter-spacing: 0.06em;
     }
 
     &__panel-win-pct {
-        font-size: 0.9rem;
-        font-weight: 700;
+        font-size: 0.92rem;
+        font-weight: 900;
         padding: 0.15rem 0.5rem;
         border-radius: 20px;
     }
 
     &__panel-subtitle {
-        font-size: 0.9rem;
+        font-size: 0.92rem;
         color: var(--text-less-prominent);
         margin-bottom: 0.4rem;
+        font-weight: 800;
     }
 
     &__panel-stats {
@@ -962,7 +973,7 @@
     &__pnl-label {
         font-size: 0.82rem;
         color: var(--text-less-prominent);
-        font-weight: 600;
+        font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
@@ -989,7 +1000,7 @@
     &__live-price-label {
         font-size: 0.82rem;
         color: var(--text-less-prominent);
-        font-weight: 600;
+        font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
@@ -1028,14 +1039,14 @@
     &__rounds-label {
         font-size: 0.82rem;
         color: var(--text-less-prominent);
-        font-weight: 600;
+        font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
 
     &__rounds-val {
-        font-size: 1.4rem;
-        font-weight: 800;
+        font-size: 1.45rem;
+        font-weight: 900;
         color: var(--text-prominent);
         line-height: 1;
     }
@@ -1116,8 +1127,8 @@
         gap: 0.25rem;
 
         span {
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.88rem;
+            font-weight: 900;
             color: var(--text-less-prominent);
             text-transform: uppercase;
             letter-spacing: 0.04em;
@@ -1138,14 +1149,14 @@
         flex: 1;
         flex-direction: column;
         gap: 0.15rem;
-        font-size: 1rem;
-        font-weight: 700;
+        font-size: 1.05rem;
+        font-weight: 900;
         color: var(--text-prominent);
     }
 
     &__entry-toggle-hint {
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 800;
         color: var(--text-less-prominent);
         line-height: 1.4;
     }
@@ -1258,6 +1269,7 @@
         display: flex;
         align-items: center;
         gap: 0.4rem;
+        font-weight: 800;
 
         &--running {
             color: #10b981;
@@ -1694,9 +1706,9 @@
         overflow-x: hidden;
 
         // The fixed "Run / Bot is not running" bar at the bottom of the mobile
-        // screen is ~5rem tall. Add clearance so the Start Engine button is
-        // fully visible when the user scrolls to the bottom.
-        padding-bottom: 6rem;
+        // screen is ~5rem tall. Add extra space so the Start Engine button and
+        // the end of the controls remain comfortably reachable while scrolling.
+        padding-bottom: 7rem;
 
         // ── header / title ─────────────────────────────────────────────────
         &__header { padding: 0.5rem 0.65rem; }
