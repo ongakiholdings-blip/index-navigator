@@ -245,6 +245,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const pendingForget    = useRef<boolean>(false);
     const fireRoundRef     = useRef<() => void>(() => {});
     const symbolRef        = useRef(symbol);
+    const digitWindowRef   = useRef<number[]>([]);
     const subscriptionGenerationRef = useRef(0);
     const latestDigitRef   = useRef<number | null>(null);   // always the most recent tick digit
     const lastTickAtRef    = useRef(0);
@@ -497,6 +498,23 @@ const OverUnderEngine: React.FC = observer(() => {
     // Keep fireRoundRef in sync so passiveSub's closure always calls the latest version
     useEffect(() => { fireRoundRef.current = fireRound; }, [fireRound]);
 
+    const selectStrategy = useCallback((nextStrategy: StrategyId) => {
+        setStrategyId(nextStrategy);
+        const e = eng.current;
+        e.strategyId = nextStrategy;
+        e.entryDigit = null;
+        if (e.running) {
+            e.waitingForEntry = e.useEntryMode;
+            setIsWaitingEntry(e.useEntryMode);
+            setLastSkipReason(null);
+            setStatusMsg(
+                e.useEntryMode
+                    ? `👀 Switched to ${nextStrategy === 'dual' ? 'Dual Over 5 / Under 4' : STRATEGY_DEFINITIONS[nextStrategy].label} — waiting for a fresh entry trigger…`
+                    : `⚡ Switched to ${nextStrategy === 'dual' ? 'Dual Over 5 / Under 4' : STRATEGY_DEFINITIONS[nextStrategy].label}`
+            );
+        }
+    }, []);
+
     // ── settle ────────────────────────────────────────────────────────────────
 
     const onSettled = useCallback((contractId: number, won: boolean, profit: number) => {
@@ -609,7 +627,9 @@ const OverUnderEngine: React.FC = observer(() => {
             const latestHistoryQuote = historyQuotes[historyQuotes.length - 1];
             const latestHistoryDigit = historyDigits[historyDigits.length - 1];
             if (generation !== subscriptionGenerationRef.current || symbolRef.current !== sym) return;
-            setDigitWindow(historyDigits.slice(-DIGIT_WINDOW));
+            const nextWindow = historyDigits.slice(-DIGIT_WINDOW);
+            digitWindowRef.current = nextWindow;
+            setDigitWindow(nextWindow);
             setDigits(historyDigits.slice(-MAX_DIGITS));
             setPrices(historyQuotes.slice(-MAX_DIGITS));
             if (latestHistoryQuote !== undefined) {
@@ -640,7 +660,9 @@ const OverUnderEngine: React.FC = observer(() => {
                 });
                 setDigitWindow(prev => {
                     const next = [...prev, d];
-                    return next.length > DIGIT_WINDOW ? next.slice(-DIGIT_WINDOW) : next;
+                    const bounded = next.length > DIGIT_WINDOW ? next.slice(-DIGIT_WINDOW) : next;
+                    digitWindowRef.current = bounded;
+                    return bounded;
                 });
                 setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
 
@@ -648,7 +670,9 @@ const OverUnderEngine: React.FC = observer(() => {
                 const e = eng.current;
                 if (e.running && e.useEntryMode && e.waitingForEntry && !e.roundInFlight) {
                     const selectedStrategy = e.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[e.strategyId];
-                    const recentDigits = digitWindow.slice(-6);
+                    // Include the current tick and read from a ref so this
+                    // long-lived subscription never evaluates a stale window.
+                    const recentDigits = [...digitWindowRef.current, d].slice(-6);
                     const hasDualEntryPair =
                         recentDigits.length >= 2 &&
                         ((recentDigits[recentDigits.length - 2] === 4 && recentDigits[recentDigits.length - 1] === 5) ||
@@ -1100,8 +1124,7 @@ const OverUnderEngine: React.FC = observer(() => {
                     <button
                         type='button'
                         className={`oue__strategy-tab${strategyId === 'dual' ? ' oue__strategy-tab--active' : ''}`}
-                        onClick={() => setStrategyId('dual')}
-                        disabled={isRunning}
+                        onClick={() => selectStrategy('dual')}
                     >
                         Dual
                     </button>
@@ -1110,8 +1133,7 @@ const OverUnderEngine: React.FC = observer(() => {
                             key={id}
                             type='button'
                             className={`oue__strategy-tab${strategyId === id ? ' oue__strategy-tab--active' : ''}`}
-                            onClick={() => setStrategyId(id)}
-                            disabled={isRunning}
+                            onClick={() => selectStrategy(id)}
                             style={strategyId === id ? { background: STRATEGY_DEFINITIONS[id].badgeColor } : undefined}
                         >
                             {STRATEGY_DEFINITIONS[id].label}
