@@ -245,6 +245,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const pendingForget    = useRef<boolean>(false);
     const fireRoundRef     = useRef<() => void>(() => {});
     const symbolRef        = useRef(symbol);
+    const subscriptionGenerationRef = useRef(0);
     const latestDigitRef   = useRef<number | null>(null);   // always the most recent tick digit
     const lastTickAtRef    = useRef(0);
     const marketTriggerRef = useRef<HTMLButtonElement>(null);
@@ -569,6 +570,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const startPassiveSub = useCallback(async (sym: string, resetHistory = true) => {
         if (!api_base.api) return;
+        const generation = ++subscriptionGenerationRef.current;
         pendingForget.current = false; // reset before stopping so stopPassiveSub can set it fresh
         stopPassiveSub();
         if (resetHistory) {
@@ -602,10 +604,11 @@ const OverUnderEngine: React.FC = observer(() => {
             const historyQuotes = pricesFromHistory
                 .map((quote: number | string) => formatQuote(quote, historyPipSize));
             const historyDigits = historyQuotes
-                .map((quote: string) => getLastDigit(quote))
+                .map((quote: string) => getLastDigit(quote, historyPipSize))
                 .filter((digit: number | null): digit is number => digit !== null);
             const latestHistoryQuote = historyQuotes[historyQuotes.length - 1];
             const latestHistoryDigit = historyDigits[historyDigits.length - 1];
+            if (generation !== subscriptionGenerationRef.current || symbolRef.current !== sym) return;
             setDigitWindow(historyDigits.slice(-DIGIT_WINDOW));
             setDigits(historyDigits.slice(-MAX_DIGITS));
             setPrices(historyQuotes.slice(-MAX_DIGITS));
@@ -619,7 +622,7 @@ const OverUnderEngine: React.FC = observer(() => {
         passiveSub.current = (api_base.api as any).onMessage().subscribe((msg: any) => {
             const data = getApiData(msg);
             const tick = data?.msg_type === 'tick' ? data.tick : data?.tick;
-            if (tick?.quote !== undefined && (!tick.symbol || tick.symbol === sym)) {
+            if (tick?.quote !== undefined && symbolRef.current === sym && (!tick.symbol || tick.symbol === sym)) {
                 // Numeric quotes can lose trailing zeroes (for example 123.450),
                 // so use Deriv's pip size before reading the final digit.
                 const pipSize = Number(tick.pip_size ?? (api_base as any).pip_sizes?.[sym]);
@@ -842,9 +845,10 @@ const OverUnderEngine: React.FC = observer(() => {
                 retryTimer = setTimeout(ensureSubscription, 500);
                 return;
             }
-            if (!passiveSub.current) {
-                startPassiveSub(symbol);
-            }
+            // Always restart when `symbol` changes. The previous subscription
+            // can still be active, so checking passiveSub.current here would
+            // leave the old market streaming after a selection change.
+            startPassiveSub(symbol);
         };
 
         ensureSubscription();
