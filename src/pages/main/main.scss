@@ -63,16 +63,17 @@
     overflow: visible;
     width: 100%;
     min-height: calc(100vh - 9rem);
-    height: auto;
+    height: calc(100vh - 9rem);
     padding: 1.6rem;
 
     @include mobile-or-tablet-screen {
         min-height: calc(100vh - 6rem);
+        height: calc(100vh - 6rem);
         padding: 0;
     }
 
     &__tabs-wrapper {
-        height: auto;
+        height: 100%;
         min-height: 100%;
         width: 100%;
         display: flex;
@@ -85,8 +86,8 @@
         border: none;
         max-width: 100%;
         width: 100%;
-        height: auto;
-        min-height: 100%;
+        height: 100%;
+        min-height: 0;
         flex: 1;
         min-width: 0;
 
@@ -110,8 +111,8 @@
         }
 
         .dc-tabs {
-            height: auto;
-            min-height: 100%;
+            height: 100%;
+            min-height: 0;
             width: 100%;
             display: grid;
             grid-template-rows: auto 1fr;
@@ -122,6 +123,16 @@
                 width: 100%;
                 height: auto;
                 min-height: 50vh;
+            }
+
+            &__content--main__tabs {
+                height: auto;
+                min-height: 0;
+                overflow: hidden;
+
+                .dashboard__chart-wrapper {
+                    height: 100%;
+                }
             }
 
             &__active-line {

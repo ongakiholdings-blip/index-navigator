@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { buildSmartchartsChampionAdapter } from '@/adapters/smartcharts-champion';
 import { createServices } from '@/adapters/smartcharts-champion/services';
 import { createTransport } from '@/adapters/smartcharts-champion/transport';
+import { api_base } from '@/external/bot-skeleton';
 import chart_api from '@/external/bot-skeleton/services/api/chart-api';
 import type { SmartchartsChampionAdapter } from '@/types/smartchart.types';
 import type {
@@ -63,6 +64,30 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
     const isMountedRef = useRef(true);
     const cleanupFunctionsRef = useRef<Array<() => void>>([]);
     const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref to store timeout for cleanup
+    const getCachedActiveSymbols = (): ActiveSymbols => {
+        const cachedSymbols = Array.isArray(api_base.active_symbols)
+            ? (api_base.active_symbols.filter(symbol => symbol?.symbol || symbol?.underlying_symbol) as ActiveSymbols)
+            : [];
+
+        return cachedSymbols.length > 0
+            ? cachedSymbols
+            : [
+                  {
+                      display_name: 'Volatility 100 Index',
+                      market: 'synthetic_index',
+                      market_display_name: 'Derived',
+                      subgroup: 'continuous_indices',
+                      subgroup_display_name: 'Continuous Indices',
+                      submarket: 'continuous_indices',
+                      submarket_display_name: 'Continuous Indices',
+                      symbol: 'R_100',
+                      symbol_type: 'stockindex',
+                      pip: 0.01,
+                      exchange_is_open: 1,
+                      is_trading_suspended: 0,
+                  } as ActiveSymbols[number],
+              ];
+    };
 
     // Track mounted state
     useEffect(() => {
@@ -116,7 +141,8 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
 
                 if (!cancelled && isMountedRef.current) {
                     // Check if activeSymbols is empty and we have retries left
-                    if (data.activeSymbols.length === 0 && retryCount < maxRetries) {
+                    const cachedActiveSymbols = getCachedActiveSymbols();
+                    if (data.activeSymbols.length === 0 && cachedActiveSymbols.length === 0 && retryCount < maxRetries) {
                         // Clear any existing timeout
                         if (retryTimeoutRef.current) {
                             clearTimeout(retryTimeoutRef.current);
@@ -133,7 +159,7 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
                     }
 
                     setChartData({
-                        activeSymbols: data.activeSymbols,
+                        activeSymbols: data.activeSymbols.length > 0 ? data.activeSymbols : cachedActiveSymbols,
                         tradingTimes: data.tradingTimes,
                     });
                     setError(null);
@@ -157,9 +183,9 @@ export const useSmartChartAdaptor = (): UseSmartChartAdaptorReturn => {
 
                 if (!cancelled && isMountedRef.current) {
                     setError(err instanceof Error ? err : new Error('Failed to load chart data'));
-                    // Set fallback data to prevent undefined
+                    const cachedActiveSymbols = getCachedActiveSymbols();
                     setChartData({
-                        activeSymbols: [] as ActiveSymbols,
+                        activeSymbols: cachedActiveSymbols,
                         tradingTimes: {} as TradingTimesMap,
                     });
                 }
