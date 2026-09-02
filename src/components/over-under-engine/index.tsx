@@ -103,8 +103,10 @@ interface EngineState {
     overLosses:           number;
     underWins:            number;
     underLosses:          number;
-    overContractId:       number | null;
-    underContractId:      number | null;
+    overContractIds:      number[];
+    underContractIds:     number[];
+    overSettledIds:       number[];
+    underSettledIds:      number[];
     overSettled:          boolean;
     underSettled:         boolean;
     overSubId:            string | null;
@@ -147,8 +149,10 @@ function makeInitState(
         overLosses: 0,
         underWins: 0,
         underLosses: 0,
-        overContractId: null,
-        underContractId: null,
+        overContractIds: [],
+        underContractIds: [],
+        overSettledIds: [],
+        underSettledIds: [],
         overSettled: true,
         underSettled: true,
         overSubId: null,
@@ -178,6 +182,8 @@ const OverUnderEngine: React.FC = observer(() => {
     const [martingale]                = useState(2);
     const [takeProfit, setTakeProfit] = useState('5');
     const [stopLoss, setStopLoss]     = useState('5');
+    const [bulkEnabled, setBulkEnabled] = useState(false);
+    const [bulkCount, setBulkCount] = useState(3);
     const [symbol, setSymbol]         = useState('1HZ10V');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(true);
@@ -330,7 +336,13 @@ const OverUnderEngine: React.FC = observer(() => {
 
         const selectedStrategy = e.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[e.strategyId];
 
+        const bulkTrades = bulkEnabled ? Math.max(1, Math.min(20, Number(bulkCount) || 1)) : 1;
+
         e.roundInFlight = true;
+        e.overContractIds = [];
+        e.underContractIds = [];
+        e.overSettledIds = [];
+        e.underSettledIds = [];
         e.overSettled   = false;
         e.underSettled  = selectedStrategy ? true : false;
         e.overRoundProfit  = null;
@@ -369,8 +381,14 @@ const OverUnderEngine: React.FC = observer(() => {
             const api = api_base.api as any;
             if (selectedStrategy) {
                 const tradeAmount = Math.max(0.05, stakeValue || 0.05);
-                const buyResponse = await api.send(makeBuy(selectedStrategy.contractType ?? 'DIGITOVER', selectedStrategy.barrier, tradeAmount));
-                e.overContractId = buyResponse?.buy?.contract_id ?? null;
+                const buyRequests = Array.from({ length: bulkTrades }, () => makeBuy(selectedStrategy.contractType ?? 'DIGITOVER', selectedStrategy.barrier, tradeAmount));
+                const buyResponses = await Promise.all(buyRequests.map(request => api.send(request)));
+                const contractIds = buyResponses
+                    .map((response: any) => response?.buy?.contract_id ?? null)
+                    .filter((id: number | null): id is number => id !== null);
+
+                e.overContractIds = contractIds;
+                e.overSettled = contractIds.length === 0;
 
                 const recordPendingBuy = (response: any, contract_type: string, barrier: string | null, amount: number) => {
                     const buy = response?.buy;
@@ -393,25 +411,34 @@ const OverUnderEngine: React.FC = observer(() => {
                     } as any);
                 };
 
-                recordPendingBuy(buyResponse, selectedStrategy.contractType ?? 'DIGITOVER', selectedStrategy.barrier, tradeAmount);
+                buyResponses.forEach((response: any) => recordPendingBuy(response, selectedStrategy.contractType ?? 'DIGITOVER', selectedStrategy.barrier, tradeAmount));
 
-                if (e.overContractId) {
-                    const r = await api.send({ proposal_open_contract: 1, contract_id: e.overContractId, subscribe: 1 });
-                    e.overSubId = r?.subscription?.id ?? null;
-                } else {
-                    e.overSettled = true;
+                if (contractIds.length > 0) {
+                    const subscriptionResults = await Promise.all(contractIds.map(contractId => api.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 })));
+                    e.overSubId = subscriptionResults[0]?.subscription?.id ?? null;
                 }
-                setStatusMsg(`${selectedStrategy.label} bot is running — waiting for trade result…`);
+                setStatusMsg(`${selectedStrategy.label} bot is running — waiting for ${bulkTrades} trade${bulkTrades > 1 ? 's' : ''} to settle…`);
                 return;
             }
 
-            const [overRes, underRes] = await Promise.all([
-                api.send(makeBuy('DIGITOVER', OVER_BARRIER, e.overStake)),
-                api.send(makeBuy('DIGITUNDER', UNDER_BARRIER, e.underStake)),
+            const overRequestList = Array.from({ length: bulkTrades }, () => makeBuy('DIGITOVER', OVER_BARRIER, e.overStake));
+            const underRequestList = Array.from({ length: bulkTrades }, () => makeBuy('DIGITUNDER', UNDER_BARRIER, e.underStake));
+            const [overResults, underResults] = await Promise.all([
+                Promise.all(overRequestList.map(request => api.send(request))),
+                Promise.all(underRequestList.map(request => api.send(request))),
             ]);
 
-            e.overContractId  = overRes?.buy?.contract_id  ?? null;
-            e.underContractId = underRes?.buy?.contract_id ?? null;
+            const overIds = overResults
+                .map((response: any) => response?.buy?.contract_id ?? null)
+                .filter((id: number | null): id is number => id !== null);
+            const underIds = underResults
+                .map((response: any) => response?.buy?.contract_id ?? null)
+                .filter((id: number | null): id is number => id !== null);
+
+            e.overContractIds = overIds;
+            e.underContractIds = underIds;
+            e.overSettled = overIds.length === 0;
+            e.underSettled = underIds.length === 0;
 
             const recordPendingBuy = (response: any, contract_type: string, barrier: string, amount: number) => {
                 const buy = response?.buy;
@@ -435,23 +462,19 @@ const OverUnderEngine: React.FC = observer(() => {
                 } as any);
             };
 
-            recordPendingBuy(overRes, 'DIGITOVER', OVER_BARRIER, e.currentRoundOverStake);
-            recordPendingBuy(underRes, 'DIGITUNDER', UNDER_BARRIER, e.currentRoundUnderStake);
+            overResults.forEach((response: any) => recordPendingBuy(response, 'DIGITOVER', OVER_BARRIER, e.currentRoundOverStake));
+            underResults.forEach((response: any) => recordPendingBuy(response, 'DIGITUNDER', UNDER_BARRIER, e.currentRoundUnderStake));
 
-            if (e.overContractId) {
-                const r = await api.send({ proposal_open_contract: 1, contract_id: e.overContractId, subscribe: 1 });
-                e.overSubId = r?.subscription?.id ?? null;
-            } else {
-                e.overSettled = true;
+            if (overIds.length > 0) {
+                const r = await Promise.all(overIds.map(contractId => api.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 })));
+                e.overSubId = r[0]?.subscription?.id ?? null;
             }
-            if (e.underContractId) {
-                const r = await api.send({ proposal_open_contract: 1, contract_id: e.underContractId, subscribe: 1 });
-                e.underSubId = r?.subscription?.id ?? null;
-            } else {
-                e.underSettled = true;
+            if (underIds.length > 0) {
+                const r = await Promise.all(underIds.map(contractId => api.send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 })));
+                e.underSubId = r[0]?.subscription?.id ?? null;
             }
 
-            setStatusMsg('Running — waiting for results…');
+            setStatusMsg(`Running — waiting for ${bulkTrades} bulk trade${bulkTrades > 1 ? 's' : ''} to settle…`);
         } catch (err: any) {
             const msg = err?.error?.message || err?.message || 'Buy failed';
             e.overSettled  = true;
@@ -460,7 +483,7 @@ const OverUnderEngine: React.FC = observer(() => {
             setStatusMsg(`⚠ ${msg}`);
             setTimeout(() => { if (eng.current.running) fireRound(); }, 1500);
         }
-    }, [client, stakeValue]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [client, stakeValue, bulkEnabled, bulkCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Keep fireRoundRef in sync so passiveSub's closure always calls the latest version
     useEffect(() => { fireRoundRef.current = fireRound; }, [fireRound]);
@@ -469,34 +492,40 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const onSettled = useCallback((contractId: number, won: boolean, profit: number) => {
         const e = eng.current;
-        const isOver  = contractId === e.overContractId;
-        const isUnder = contractId === e.underContractId;
+        const isOver  = e.overContractIds.includes(contractId);
+        const isUnder = e.underContractIds.includes(contractId);
         if (!isOver && !isUnder) return;
-        // A subscribed proposal_open_contract can repeat the terminal status.
-        // Settle each side exactly once.
-        if ((isOver && e.overSettled) || (isUnder && e.underSettled)) return;
+
+        if (isOver && e.overSettledIds.includes(contractId)) return;
+        if (isUnder && e.underSettledIds.includes(contractId)) return;
 
         e.totalProfit = round2(e.totalProfit + profit);
         setTotalProfit(e.totalProfit);
 
         if (isOver) {
-            e.overSettled     = true;
-            e.overRoundProfit = profit;
+            e.overSettledIds = [...e.overSettledIds, contractId];
+            e.overRoundProfit = (e.overRoundProfit ?? 0) + profit;
             if (won) { e.overWins++;   e.overStake = e.baseStake;                setLastOverResult('won'); }
             else     { e.overLosses++; e.overStake = round2(e.overStake * e.martingale); setLastOverResult('lost'); }
             setOverWins(e.overWins);
             setOverLosses(e.overLosses);
             setOverCurrentStake(e.overStake);
+            if (e.overContractIds.length > 0 && e.overContractIds.every(id => e.overSettledIds.includes(id))) {
+                e.overSettled = true;
+            }
         }
 
         if (isUnder) {
-            e.underSettled     = true;
-            e.underRoundProfit = profit;
+            e.underSettledIds = [...e.underSettledIds, contractId];
+            e.underRoundProfit = (e.underRoundProfit ?? 0) + profit;
             if (won) { e.underWins++;   e.underStake = e.baseStake;                   setLastUnderResult('won'); }
             else     { e.underLosses++; e.underStake = round2(e.underStake * e.martingale); setLastUnderResult('lost'); }
             setUnderWins(e.underWins);
             setUnderLosses(e.underLosses);
             setUnderCurrentStake(e.underStake);
+            if (e.underContractIds.length > 0 && e.underContractIds.every(id => e.underSettledIds.includes(id))) {
+                e.underSettled = true;
+            }
         }
 
         if (e.strategyId !== 'dual') {
@@ -512,7 +541,6 @@ const OverUnderEngine: React.FC = observer(() => {
             }
         }
 
-        // Both sides done — decide next step
         if (e.overSettled && e.underSettled) {
             e.roundCounter++;
             const overP   = e.overRoundProfit  ?? 0;
@@ -522,13 +550,12 @@ const OverUnderEngine: React.FC = observer(() => {
             e.roundInFlight = false;
             e.entryDigit    = null;
 
-            // Stop after every trade — check limits first, then stop with round result
             if (!checkLimits() && e.running) {
                 const sign = roundPnl >= 0 ? '+' : '';
                 stopEngine(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
             }
         }
-    }, [checkLimits, fireRound]);
+    }, [checkLimits, fireRound, stakeValue]);
 
     // ── passive subscription: stream ticks as soon as a market is chosen ─────
 
@@ -1240,6 +1267,38 @@ const OverUnderEngine: React.FC = observer(() => {
                         />
                     </label>
                 </div>
+
+                <label className='oue__entry-toggle'>
+                    <span className='oue__entry-toggle-label'>
+                        Bulk purchase
+                    </span>
+                    <div
+                        className={`oue__toggle${bulkEnabled ? ' oue__toggle--on' : ''}`}
+                        onClick={() => !isRunning && setBulkEnabled(v => !v)}
+                        role='switch'
+                        aria-checked={bulkEnabled}
+                        aria-disabled={isRunning}
+                        tabIndex={0}
+                        onKeyDown={e => { if (!isRunning && (e.key === ' ' || e.key === 'Enter')) setBulkEnabled(v => !v); }}
+                    >
+                        <div className='oue__toggle-thumb' />
+                    </div>
+                </label>
+
+                {bulkEnabled && (
+                    <label className='oue__field'>
+                        <span>Bulk count</span>
+                        <input
+                            type='number'
+                            min='1'
+                            step='1'
+                            value={bulkCount}
+                            onChange={e => setBulkCount(Math.max(1, Number(e.target.value) || 1))}
+                            disabled={isRunning}
+                            className='oue__input'
+                        />
+                    </label>
+                )}
 
                 {/* entry mode toggle */}
                 <label className='oue__entry-toggle'>
