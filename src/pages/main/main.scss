@@ -133,6 +133,18 @@
                 .dashboard__chart-wrapper {
                     height: 100%;
                 }
+
+                // AI Bots has a longer control surface than the viewport. Keep
+                // its panel fully reachable without changing other tab layouts.
+                &:has(> .oue) {
+                    overflow-y: auto;
+                    overflow-x: hidden;
+
+                    > .oue {
+                        height: auto;
+                        min-height: 100%;
+                    }
+                }
             }
 
             &__active-line {
