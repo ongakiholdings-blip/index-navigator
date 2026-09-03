@@ -191,7 +191,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const [takeProfit, setTakeProfit] = useState('5');
     const [stopLoss, setStopLoss]     = useState('5');
     const [bulkEnabled, setBulkEnabled] = useState(false);
-    const [bulkCount, setBulkCount] = useState(3);
+    const [bulkCount, setBulkCount] = useState('3');
     const [symbol, setSymbol]         = useState('1HZ10V');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(true);
@@ -245,6 +245,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const pendingForget    = useRef<boolean>(false);
     const fireRoundRef     = useRef<() => void>(() => {});
     const symbolRef        = useRef(symbol);
+    const entryTriggerModeRef = useRef(entryTriggerMode);
     const digitWindowRef   = useRef<number[]>([]);
     const subscriptionGenerationRef = useRef(0);
     const latestDigitRef   = useRef<number | null>(null);   // always the most recent tick digit
@@ -252,6 +253,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const marketTriggerRef = useRef<HTMLButtonElement>(null);
     const marketDropdownRef = useRef<HTMLDivElement>(null);
     useEffect(() => { symbolRef.current = symbol; }, [symbol]);
+    useEffect(() => { entryTriggerModeRef.current = entryTriggerMode; }, [entryTriggerMode]);
 
     // Close dropdown on outside click — must exclude both the trigger and the portaled dropdown
     useEffect(() => {
@@ -346,7 +348,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
         const selectedStrategy = e.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[e.strategyId];
 
-        const bulkTrades = bulkEnabled ? Math.max(1, Math.min(20, Number(bulkCount) || 1)) : 1;
+        const bulkTrades = bulkEnabled ? Number(bulkCount) : 1;
 
         e.roundInFlight = true;
         e.overContractIds = [];
@@ -503,6 +505,7 @@ const OverUnderEngine: React.FC = observer(() => {
         const e = eng.current;
         e.strategyId = nextStrategy;
         e.entryDigit = null;
+        setLastEntryDigit(null);
         if (e.running) {
             e.waitingForEntry = e.useEntryMode;
             setIsWaitingEntry(e.useEntryMode);
@@ -672,12 +675,14 @@ const OverUnderEngine: React.FC = observer(() => {
                     const selectedStrategy = e.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[e.strategyId];
                     // Include the current tick and read from a ref so this
                     // long-lived subscription never evaluates a stale window.
-                    const recentDigits = [...digitWindowRef.current, d].slice(-6);
+                    const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
+                    digitWindowRef.current = nextWindow;
+                    const recentDigits = nextWindow.slice(-6);
                     const hasDualEntryPair =
                         recentDigits.length >= 2 &&
                         ((recentDigits[recentDigits.length - 2] === 4 && recentDigits[recentDigits.length - 1] === 5) ||
                             (recentDigits[recentDigits.length - 2] === 5 && recentDigits[recentDigits.length - 1] === 4));
-                    const useDualPairTrigger = !selectedStrategy && entryTriggerMode === 'pair';
+                    const useDualPairTrigger = !selectedStrategy && entryTriggerModeRef.current === 'pair';
 
                     if (selectedStrategy) {
                         const strategyEntryDigits = getStrategyEntryDigits(e.strategyId);
@@ -769,6 +774,10 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const startEngine = useCallback(async () => {
         if (eng.current.running) return;
+        if (bulkEnabled && (!/^\d+$/.test(bulkCount) || Number(bulkCount) < 1)) {
+            setStatusMsg('⚠ Enter a whole number of bulk purchases before starting');
+            return;
+        }
         if (!api_base.api) { setStatusMsg('⚠ Not connected — please log in first'); return; }
 
         const resolvedStrategy = strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[strategyId];
@@ -849,11 +858,40 @@ const OverUnderEngine: React.FC = observer(() => {
             if (!entryMode) {
                 setStatusMsg('Connected — firing first round…');
                 await fireRound();
+            } else if (digitWindowRef.current.length > 0) {
+                // Evaluate loaded history immediately when entry mode starts,
+                // so a ready condition is not missed until the next tick.
+                const activeStrategyId = eng.current.strategyId;
+                const selectedStrategy = activeStrategyId === 'dual' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
+                const recentDigits = digitWindowRef.current.slice(-6);
+                const latestDigit = recentDigits[recentDigits.length - 1];
+                const hasDualEntryPair =
+                    recentDigits.length >= 2 &&
+                    ((recentDigits[recentDigits.length - 2] === 4 && latestDigit === 5) ||
+                        (recentDigits[recentDigits.length - 2] === 5 && latestDigit === 4));
+                const shouldTrigger = selectedStrategy
+                    ? !isCautionCluster(selectedStrategy, recentDigits) &&
+                        (['over1', 'over2', 'under8', 'under7', 'even', 'odd'].includes(activeStrategyId)
+                            ? matchesStrategyEntrySequence(activeStrategyId, recentDigits)
+                            : getStrategyEntryDigits(activeStrategyId).includes(latestDigit))
+                    : entryTriggerModeRef.current === 'pair'
+                        ? hasDualEntryPair
+                        : ENTRY_DIGITS.has(latestDigit);
+
+                if (shouldTrigger && latestDigit !== undefined) {
+                    eng.current.waitingForEntry = false;
+                    eng.current.entryDigit = latestDigit;
+                    setLastEntryDigit(latestDigit);
+                    setLastSkipReason(null);
+                    setIsWaitingEntry(false);
+                    setStatusMsg('Entry condition ready — firing round…');
+                    await fireRound();
+                }
             }
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
-    }, [stakeValue, martingale, takeProfitValue, stopLossValue, entryMode, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
+    }, [stakeValue, martingale, takeProfitValue, stopLossValue, entryMode, entryTriggerMode, strategyId, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
 
     // Start passive ticks whenever the selected symbol changes (or on first
     // mount). The engine can render before authentication finishes, so retry
@@ -1327,7 +1365,7 @@ const OverUnderEngine: React.FC = observer(() => {
                             min='1'
                             step='1'
                             value={bulkCount}
-                            onChange={e => setBulkCount(Math.max(1, Number(e.target.value) || 1))}
+                            onChange={e => setBulkCount(e.target.value)}
                             disabled={isRunning}
                             className='oue__input'
                         />
