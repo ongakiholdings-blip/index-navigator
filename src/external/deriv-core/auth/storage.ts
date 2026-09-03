@@ -66,9 +66,6 @@ export function getAuthInfo(): AuthInfo | null {
   if (!raw) return null;
 
   const authInfo: AuthInfo = JSON.parse(raw);
-  if (authInfo.expires_at && Date.now() > authInfo.expires_at * 1000) {
-    return null; // Token expired
-  }
   return authInfo;
 }
 

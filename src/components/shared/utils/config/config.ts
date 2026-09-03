@@ -2,6 +2,8 @@ import {
     buildAuthorizationUrl,
     buildSignUpUrl,
     getAuthInfo,
+    refreshAccessToken,
+    storeAuthInfo,
     parseReferralLink,
     parseLandingParams,
     resolveReferralViaProxy,
@@ -81,9 +83,17 @@ export const getSocketURL = async (): Promise<string> => {
             }
         }
 
-        const authInfo = getAuthInfo();
+        let authInfo = getAuthInfo();
         if (!authInfo || !authInfo.access_token) {
             return getDefaultServerURL();
+        }
+
+        if (authInfo.expires_at && Date.now() >= authInfo.expires_at * 1000) {
+            if (!authInfo.refresh_token || !process.env.NEXT_PUBLIC_DERIV_APP_ID) {
+                return getDefaultServerURL();
+            }
+            authInfo = await refreshAccessToken(authInfo.refresh_token, process.env.NEXT_PUBLIC_DERIV_APP_ID);
+            storeAuthInfo(authInfo);
         }
 
         const wsUrl = await DerivWSAccountsService.getAuthenticatedWebSocketURL(authInfo.access_token);
