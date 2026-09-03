@@ -715,7 +715,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
                     if (selectedStrategy) {
                         const strategyEntryDigits = getStrategyEntryDigits(e.strategyId);
-                        if (isCautionCluster(selectedStrategy, recentDigits)) {
+                        if (e.strategyId !== 'over1' && e.strategyId !== 'under8' && isCautionCluster(selectedStrategy, recentDigits)) {
                             setLastSkipReason(`Skipped ${selectedStrategy.label}: caution cluster detected (${selectedStrategy.cautionDigits.join(', ')})`);
                             setIsWaitingEntry(true);
                             return;
@@ -736,11 +736,11 @@ const OverUnderEngine: React.FC = observer(() => {
                         } else {
                             setLastSkipReason(
                                 e.strategyId === 'over1'
-                                    ? `Waiting for Over 1 entry sequence: 1 → 3, 4, 5, or 6 — got ${d}`
+                                    ? `Waiting for Over 1 entry sequence: 3 digits from 0–2, then 3–7 — got ${d}`
                                     : e.strategyId === 'over2'
                                         ? `Waiting for Over 2 entry sequence: 0, 1, or 2 → 3, 4, 5, or 6 — got ${d}`
                                         : e.strategyId === 'under8'
-                                            ? `Waiting for Under 8 entry sequence: 8 → 5, 6, 7, 8, or 9 — got ${d}`
+                                            ? `Waiting for Under 8 entry sequence: 3 digits from 7–9, then 3–7 — got ${d}`
                                             : e.strategyId === 'under7'
                                                 ? `Waiting for Under 7 entry sequence: 7, 8, or 9 → 3, 6, 7, 8, or 9 — got ${d}`
                                                             : e.strategyId === 'even'
@@ -837,11 +837,11 @@ const OverUnderEngine: React.FC = observer(() => {
         setIsWaitingEntry(entryMode);
         const statusStart = resolvedStrategy
             ? (strategyId === 'over1'
-                ? '👀 Watching for Over 1 sequence: 1 → 3, 4, 5, or 6…'
+                ? '👀 Watching for Over 1 sequence: 0–2, 0–2, 0–2, then 3–7…'
                 : strategyId === 'over2'
                     ? '👀 Watching for Over 2 sequence: 0, 1, or 2 → 3, 4, 5, or 6…'
                     : strategyId === 'under8'
-                        ? '👀 Watching for Under 8 sequence: 8 → 5, 6, 7, 8, or 9…'
+                        ? '👀 Watching for Under 8 sequence: 7–9, 7–9, 7–9, then 3–7…'
                         : strategyId === 'under7'
                             ? '👀 Watching for Under 7 sequence: 7, 8, or 9 → 3, 6, 7, 8, or 9…'
                                 : strategyId === 'even'
@@ -899,7 +899,7 @@ const OverUnderEngine: React.FC = observer(() => {
                     ((recentDigits[recentDigits.length - 2] === 4 && latestDigit === 5) ||
                         (recentDigits[recentDigits.length - 2] === 5 && latestDigit === 4));
                 const shouldTrigger = selectedStrategy
-                    ? !isCautionCluster(selectedStrategy, recentDigits) &&
+                    ? (activeStrategyId === 'over1' || !isCautionCluster(selectedStrategy, recentDigits)) &&
                         (['over1', 'over2', 'under8', 'under7', 'even', 'odd'].includes(activeStrategyId)
                             ? matchesStrategyEntrySequence(activeStrategyId, recentDigits)
                             : getStrategyEntryDigits(activeStrategyId).includes(latestDigit))
@@ -1023,11 +1023,11 @@ const OverUnderEngine: React.FC = observer(() => {
                         <span className='oue__entry-badge'>
                             {isSingleStrategyMode
                                 ? strategyId === 'over1'
-                                    ? <>Entry: <strong>1 → 3–6</strong></>
+                                    ? <>Entry: <strong>0–2, 0–2, 0–2 → 3–7</strong></>
                                     : strategyId === 'over2'
                                         ? <>Entry: <strong>0/1/2 → 3–6</strong></>
                                         : strategyId === 'under8'
-                                            ? <>Entry: <strong>8 → 5–9</strong></>
+                                            ? <>Entry: <strong>7–9, 7–9, 7–9 → 3–7</strong></>
                                             : strategyId === 'under7'
                                                 ? <>Entry: <strong>7/8/9 → 3/6/7/8/9</strong></>
                                                         : strategyId === 'even'
@@ -1155,11 +1155,11 @@ const OverUnderEngine: React.FC = observer(() => {
                         <span className='oue__entry-waiting-dot' />
                         {isSingleStrategyMode
                             ? strategyId === 'over1'
-                                ? <>Watching for the sequence <strong>1 → 3, 4, 5, or 6</strong> before the next Over 1 trade…</>
+                                ? <>Watching for the sequence <strong>0–2, 0–2, 0–2 → 3–7</strong> before the next Over 1 trade…</>
                                 : strategyId === 'over2'
                                     ? <>Watching for the sequence <strong>0/1/2 → 3, 4, 5, or 6</strong> before the next Over 2 trade…</>
                                     : strategyId === 'under8'
-                                        ? <>Watching for the sequence <strong>8 → 5, 6, 7, 8, or 9</strong> before the next Under 8 trade…</>
+                                        ? <>Watching for the sequence <strong>7–9, 7–9, 7–9 → 3–7</strong> before the next Under 8 trade…</>
                                         : strategyId === 'under7'
                                             ? <>Watching for the sequence <strong>7/8/9 → 3, 6, 7, 8, or 9</strong> before the next Under 7 trade…</>
                                                 : strategyId === 'even'

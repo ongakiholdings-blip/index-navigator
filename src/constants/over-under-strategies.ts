@@ -220,12 +220,21 @@ export function matchesStrategyEntrySequence(id: StrategyId, recentDigits: numbe
     const current = recentDigits[recentDigits.length - 1];
 
     switch (id) {
-        case 'over1':
-            return prev === 1 && [3, 4, 5, 6].includes(current);
+        case 'over1': {
+            if (recentDigits.length < 4) return false;
+            const lastFour = recentDigits.slice(-4);
+            return lastFour.slice(0, 3).every(d => [0, 1, 2].includes(d))
+                && [3, 4, 5, 6, 7].includes(lastFour[3]);
+        }
         case 'over2':
             return [0, 1, 2].includes(prev) && [3, 4, 5, 6].includes(current);
         case 'under8':
-            return prev === 8 && [5, 6, 7, 8, 9].includes(current);
+            if (recentDigits.length < 4) return false;
+            {
+                const lastFour = recentDigits.slice(-4);
+                return lastFour.slice(0, 3).every(d => [7, 8, 9].includes(d))
+                    && [3, 4, 5, 6, 7].includes(lastFour[3]);
+            }
         case 'under7':
             return [7, 8, 9].includes(prev) && [3, 6, 7, 8, 9].includes(current);
         case 'even': {
