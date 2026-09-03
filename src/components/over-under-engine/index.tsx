@@ -419,7 +419,7 @@ const OverUnderEngine: React.FC = observer(() => {
         try {
             const api = api_base.api as any;
             if (selectedStrategy) {
-                const tradeAmount = Math.max(0.05, stakeValue || 0.05);
+                const tradeAmount = Math.max(0.05, e.overStake);
                 const buyRequests = Array.from({ length: bulkTrades }, () => makeBuy(selectedStrategy.contractType ?? 'DIGITOVER', selectedStrategy.barrier, tradeAmount));
                 const buyResponses = await Promise.all(buyRequests.map(request => api.send(request)));
                 const contractIds = buyResponses
@@ -587,7 +587,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
         if (e.strategyId !== 'dual') {
             const singleWon = won;
-            const nextSingleStake = e.currentRoundOverStake || stakeValue;
+            const nextSingleStake = e.overStake;
             setSingleStake(nextSingleStake);
             if (singleWon) {
                 setSingleWins(prev => prev + 1);
