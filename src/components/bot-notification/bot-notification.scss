@@ -114,5 +114,9 @@
     @include mobile-or-tablet-screen {
         font-size: 1.3rem;
         padding: 1.4rem 1.6rem;
+        left: 50% !important;
+        right: auto !important;
+        margin: 0 !important;
+        transform: translate(-50%, -50%) !important;
     }
 }

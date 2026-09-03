@@ -136,6 +136,7 @@ interface EngineState {
     // AI strategy engine
     strategyId:             StrategyId;
     consecutiveLosses:      number;
+    martingaleEnabled:      boolean;
 }
 
 function makeInitState(
@@ -145,6 +146,7 @@ function makeInitState(
     sl: number,
     useEntry: boolean,
     strategyId: StrategyId = 'dual',
+    martingaleEnabled = true,
 ): EngineState {
     return {
         running: false,
@@ -179,6 +181,7 @@ function makeInitState(
         roundCounter: 0,
         strategyId,
         consecutiveLosses: 0,
+        martingaleEnabled,
     };
 }
 
@@ -189,7 +192,8 @@ const OverUnderEngine: React.FC = observer(() => {
 
     // Config
     const [stake, setStake]           = useState('0.5');
-    const [martingale]                = useState(2);
+    const [martingale, setMartingale] = useState('2');
+    const [martingaleEnabled, setMartingaleEnabled] = useState(true);
     const [takeProfit, setTakeProfit] = useState('5');
     const [stopLoss, setStopLoss]     = useState('5');
     const [bulkEnabled, setBulkEnabled] = useState(false);
@@ -232,9 +236,10 @@ const OverUnderEngine: React.FC = observer(() => {
     const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
 
     const stakeValue = Number(stake) || 0;
+    const martingaleValue = Number(martingale);
     const takeProfitValue = Number(takeProfit) || 0;
     const stopLossValue = Number(stopLoss) || 0;
-    const eng              = useRef<EngineState>(makeInitState(stakeValue, martingale, takeProfitValue, stopLossValue, entryMode, strategyId));
+    const eng              = useRef<EngineState>(makeInitState(stakeValue, martingaleValue, takeProfitValue, stopLossValue, entryMode, strategyId, martingaleEnabled));
     const msgSub           = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveSub       = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveTickId    = useRef<string | null>(null);
@@ -558,7 +563,7 @@ const OverUnderEngine: React.FC = observer(() => {
             e.overSettledIds = [...e.overSettledIds, contractId];
             e.overRoundProfit = (e.overRoundProfit ?? 0) + profit;
             if (won) { e.overWins++;   e.overStake = e.baseStake;                setLastOverResult('won'); }
-            else     { e.overLosses++; e.overStake = round2(e.overStake * e.martingale); setLastOverResult('lost'); }
+            else     { e.overLosses++; e.overStake = e.martingaleEnabled ? round2(e.overStake * e.martingale) : e.baseStake; setLastOverResult('lost'); }
             setOverWins(e.overWins);
             setOverLosses(e.overLosses);
             setOverCurrentStake(e.overStake);
@@ -571,7 +576,7 @@ const OverUnderEngine: React.FC = observer(() => {
             e.underSettledIds = [...e.underSettledIds, contractId];
             e.underRoundProfit = (e.underRoundProfit ?? 0) + profit;
             if (won) { e.underWins++;   e.underStake = e.baseStake;                   setLastUnderResult('won'); }
-            else     { e.underLosses++; e.underStake = round2(e.underStake * e.martingale); setLastUnderResult('lost'); }
+            else     { e.underLosses++; e.underStake = e.martingaleEnabled ? round2(e.underStake * e.martingale) : e.baseStake; setLastUnderResult('lost'); }
             setUnderWins(e.underWins);
             setUnderLosses(e.underLosses);
             setUnderCurrentStake(e.underStake);
@@ -803,6 +808,10 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const startEngine = useCallback(async () => {
         if (eng.current.running) return;
+        if (martingaleEnabled && (!Number.isFinite(martingaleValue) || martingaleValue <= 0)) {
+            setStatusMsg('⚠ Enter a positive martingale multiplier before starting');
+            return;
+        }
         if (bulkEnabled && (!/^\d+$/.test(bulkCount) || Number(bulkCount) < 1)) {
             setStatusMsg('⚠ Enter a whole number of bulk purchases before starting');
             return;
@@ -812,7 +821,7 @@ const OverUnderEngine: React.FC = observer(() => {
         const resolvedStrategy = strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[strategyId];
         const strategyTakeProfit = resolvedStrategy ? resolvedStrategy.takeProfit : takeProfitValue;
         const strategyStopLoss = resolvedStrategy ? resolvedStrategy.stopLoss : stopLossValue;
-        eng.current = makeInitState(stakeValue, martingale, strategyTakeProfit, strategyStopLoss, entryMode, strategyId);
+        eng.current = makeInitState(stakeValue, martingaleValue, strategyTakeProfit, strategyStopLoss, entryMode, strategyId, martingaleEnabled);
         eng.current.running = true;
         if (resolvedStrategy) {
             eng.current.baseStake = stakeValue;
@@ -920,7 +929,7 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
-    }, [stakeValue, martingale, takeProfitValue, stopLossValue, entryMode, entryTriggerMode, strategyId, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
+    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, entryTriggerMode, strategyId, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
 
     // Start passive ticks whenever the selected symbol changes (or on first
     // mount). The engine can render before authentication finishes, so retry
@@ -1337,6 +1346,38 @@ const OverUnderEngine: React.FC = observer(() => {
                             disabled={isRunning}
                             className='oue__input'
                         />
+                    </label>
+                    {martingaleEnabled && (
+                        <label className='oue__field'>
+                            <span>Martingale</span>
+                            <input
+                                type='number'
+                                min='0'
+                                step='0.1'
+                                value={martingale}
+                                onChange={e => setMartingale(e.target.value)}
+                                disabled={isRunning}
+                                className='oue__input'
+                            />
+                        </label>
+                    )}
+                    <label className='oue__entry-toggle'>
+                        <span className='oue__entry-toggle-label'>Use Martingale</span>
+                        <div
+                            className={`oue__toggle${martingaleEnabled ? ' oue__toggle--on' : ''}`}
+                            onClick={() => !isRunning && setMartingaleEnabled(value => !value)}
+                            role='switch'
+                            aria-checked={martingaleEnabled}
+                            aria-disabled={isRunning}
+                            tabIndex={0}
+                            onKeyDown={e => {
+                                if (!isRunning && (e.key === ' ' || e.key === 'Enter')) {
+                                    setMartingaleEnabled(value => !value);
+                                }
+                            }}
+                        >
+                            <div className='oue__toggle-thumb' />
+                        </div>
                     </label>
                     <label className='oue__field'>
                         <span>Take Profit</span>
