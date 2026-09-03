@@ -1178,11 +1178,6 @@ const OverUnderEngine: React.FC = observer(() => {
                         </button>
                     ))}
                 </div>
-                <p className='oue__strategy-prompt'>
-                    {strategyId === 'dual'
-                        ? 'Classic balance play: buy Over 5 and Under 4 at the same time, then let the market settle the two sides.'
-                        : `${STRATEGY_DEFINITIONS[strategyId].label}: ${STRATEGY_DEFINITIONS[strategyId].intro}`}
-                </p>
                 {strategyId !== 'dual' && (
                     <div className='oue__single-stats'>
                         <span>Wins: <strong>{singleWins}</strong></span>
