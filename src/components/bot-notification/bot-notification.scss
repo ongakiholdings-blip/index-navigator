@@ -91,3 +91,28 @@
     background: var(--button-primary-default);
     color: var(--text-colored-background);
 }
+
+.ai-bots-limit-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    width: min(36rem, calc(100vw - 3.2rem));
+    min-height: 0;
+    height: auto;
+    padding: 1.6rem 2rem;
+    border: 1px solid rgb(32 212 212 / 45%);
+    border-radius: 1.2rem;
+    background: var(--general-section-1);
+    color: var(--text-general);
+    box-shadow: 0 0 2.4rem rgb(32 212 212 / 25%), 0 0.8rem 2.4rem rgb(0 0 0 / 35%);
+    text-align: center;
+    font-size: 1.5rem;
+    line-height: 1.5;
+
+    @include mobile-or-tablet-screen {
+        font-size: 1.3rem;
+        padding: 1.4rem 1.6rem;
+    }
+}

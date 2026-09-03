@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from 'react-toastify';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
@@ -14,6 +15,7 @@ import {
     type StrategyId,
 } from '@/constants/over-under-strategies';
 import { localize } from '@deriv-com/translations';
+import { botNotification } from '@/components/bot-notification/bot-notification';
 import './over-under-engine.scss';
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -335,8 +337,28 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const checkLimits = useCallback((): boolean => {
         const { totalProfit: profit, takeProfit: tp, stopLoss: sl } = eng.current;
-        if (profit >= tp) { stopEngine(`✅ Take Profit hit (+${profit.toFixed(2)})`); return true; }
-        if (profit <= -sl) { stopEngine(`🛑 Stop Loss hit (${profit.toFixed(2)})`); return true; }
+        if (profit >= tp) {
+            const amount = profit.toFixed(2);
+            botNotification(`🎉 Take profit reached — congratulations! You won ${amount}`, undefined, {
+                type: 'success',
+                position: toast.POSITION.TOP_CENTER,
+                autoClose: 8000,
+                className: 'ai-bots-limit-notification',
+            });
+            stopEngine(`✅ Take Profit hit (+${amount})`);
+            return true;
+        }
+        if (profit <= -sl) {
+            const amount = Math.abs(profit).toFixed(2);
+            botNotification(`🛑 Stop loss reached — the session ended at -${amount}`, undefined, {
+                type: 'error',
+                position: toast.POSITION.TOP_CENTER,
+                autoClose: 8000,
+                className: 'ai-bots-limit-notification',
+            });
+            stopEngine(`🛑 Stop Loss hit (${profit.toFixed(2)})`);
+            return true;
+        }
         return false;
     }, [stopEngine]);
 
@@ -580,12 +602,19 @@ const OverUnderEngine: React.FC = observer(() => {
             e.roundInFlight = false;
             e.entryDigit    = null;
 
-            if (!checkLimits() && e.running) {
+            if (checkLimits() || !e.running) return;
+
+            if (e.useEntryMode) {
+                e.waitingForEntry = true;
+                setIsWaitingEntry(true);
+                setStatusMsg('Round complete — waiting for the next entry condition…');
+            } else {
                 const sign = roundPnl >= 0 ? '+' : '';
-                stopEngine(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
+                setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
+                setTimeout(() => { if (eng.current.running) fireRoundRef.current(); }, 1500);
             }
         }
-    }, [checkLimits, fireRound, stakeValue]);
+    }, [checkLimits, stakeValue]);
 
     // ── passive subscription: stream ticks as soon as a market is chosen ─────
 
