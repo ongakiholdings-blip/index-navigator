@@ -189,7 +189,14 @@ const CopyTrading = observer(() => {
                         <div className='ct2__start-actions'>
                             <button
                                 className='ct2__start-btn ct2__start-btn--demo-real'
-                                onClick={() => void ct.startDemoToReal()}
+                                onClick={() =>
+                                    void ct.startDemoToReal(api_base?.api, {
+                                        ...(api_base as any)?.account_info,
+                                        loginid: store.client.loginid || (api_base as any)?.account_info?.loginid,
+                                        balance: parseFloat(store.client.balance) || 0,
+                                        currency: store.client.currency,
+                                    })
+                                }
                                 disabled={!canStartButtons}
                                 title={localize('Copy trades from the logged-in demo account to real destinations')}
                             >
@@ -241,7 +248,7 @@ const CopyTrading = observer(() => {
                     </p>
                  </section>
 
-                 <section className='ct2__section'>
+                 {!sourceAccount?.is_virtual && <section className='ct2__section'>
                     <div className='ct2__section-heading'>
                         <h2>{localize('Destination API Token')}</h2>
                         <span className='ct2__leader-status'>{localize('Trades are copied here')}</span>
@@ -271,7 +278,7 @@ const CopyTrading = observer(() => {
                         <span className='ct2__multiplier-hint'>{localize('1.0 copies the original stake')}</span>
                     </div>
                     {ct.leader_error && <span className='ct2__error-text'>{ct.leader_error}</span>}
-                </section>
+                </section>}
 
                 <section className='ct2__section ct2__clients'>
                     <div className='ct2__section-heading'>

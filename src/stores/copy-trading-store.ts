@@ -434,7 +434,7 @@ export default class CopyTradingStore {
         }
     };
 
-    startDemoToReal = async () => {
+    startDemoToReal = async (destinationApi?: any, destinationAccountInfo?: any) => {
         if (this.is_running) return;
         try {
             const currentLoginid = this.leader_account?.loginid || '';
@@ -470,15 +470,23 @@ export default class CopyTradingStore {
             const demoToken = getStoredToken(demoLoginid);
             const destinationToken = getStoredToken(realLoginid);
 
-            if (!demoToken || !destinationToken) {
-                this.leader_error = 'The paired demo and real accounts are not available in the logged-in session';
+            if (!demoToken) {
+                this.leader_error = 'The paired demo account is not available in the logged-in session';
                 return;
+            }
+
+            if (destinationApi && destinationAccountInfo?.loginid && !this.followers.some(follower => follower.account?.loginid === destinationAccountInfo.loginid)) {
+                await this.connectFollowerFromApi(destinationApi, {
+                    ...destinationAccountInfo,
+                    is_virtual: 0,
+                });
+            } else if (destinationToken && !this.followers.some(follower => follower.token === destinationToken)) {
+                await this.addFollower(destinationToken);
             }
 
             if (!this.leader_account?.is_virtual || this.leader_account.loginid !== demoLoginid) {
                 await this.connectLeader(demoToken);
             }
-            await this.addFollower(destinationToken);
             await this.startCopying();
         } catch (error: any) {
             this.leader_error = error?.message ?? 'Unable to prepare the paired real account';
