@@ -92,13 +92,17 @@
     color: var(--text-colored-background);
 }
 
-.ai-bots-limit-notification {
+.Toastify__toast-container .ai-bots-limit-notification {
     position: fixed;
     top: 50%;
     left: 50%;
+    right: auto !important;
+    bottom: auto !important;
     transform: translate(-50%, -50%);
     z-index: 10000;
     width: min(36rem, calc(100vw - 3.2rem));
+    max-width: calc(100vw - 3.2rem);
+    box-sizing: border-box;
     min-height: 0;
     height: auto;
     padding: 1.6rem 2rem;
@@ -116,6 +120,10 @@
         padding: 1.4rem 1.6rem;
         left: 50% !important;
         right: auto !important;
+        top: 50% !important;
+        bottom: auto !important;
+        width: calc(100vw - 2rem);
+        max-width: calc(100vw - 2rem);
         margin: 0 !important;
         transform: translate(-50%, -50%) !important;
     }

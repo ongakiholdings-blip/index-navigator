@@ -206,7 +206,7 @@ const OverUnderEngine: React.FC = observer(() => {
     // any other value runs a single-leg strategy using the recommendations
     // from the Strategy tab (entry filter, recovery method, stake sizing).
     const [strategyId, setStrategyId] = useState<StrategyId>('dual');
-    const [strategyOpen, setStrategyOpen] = useState(false);
+    const [strategySelected, setStrategySelected] = useState(false);
     const [singleWins, setSingleWins]     = useState(0);
     const [singleLosses, setSingleLosses] = useState(0);
     const [singleStake, setSingleStake]   = useState(0.5);
@@ -233,7 +233,12 @@ const OverUnderEngine: React.FC = observer(() => {
     const [isWaitingEntry, setIsWaitingEntry]             = useState(false);
     const [lastEntryDigit, setLastEntryDigit]             = useState<number | null>(null);
 
-    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+    const [dropdownPos, setDropdownPos] = useState<{
+        top: number;
+        left: number;
+        right: number | 'auto';
+        maxHeight: number;
+    } | null>(null);
 
     const stakeValue = Number(stake) || 0;
     const martingaleValue = Number(martingale);
@@ -279,12 +284,28 @@ const OverUnderEngine: React.FC = observer(() => {
         if (isRunning) return;
         if (!marketOpen && marketTriggerRef.current) {
             const rect = marketTriggerRef.current.getBoundingClientRect();
-            const DROPDOWN_W = 320; // min-width: 20rem ≈ 320px
             const MARGIN = 8;
-            // Align right edge of dropdown with right edge of trigger, then clamp inside viewport
-            let left = rect.right - DROPDOWN_W;
-            left = Math.max(MARGIN, Math.min(left, window.innerWidth - DROPDOWN_W - MARGIN));
-            setDropdownPos({ top: rect.bottom + 8, left });
+            const isMobile = window.matchMedia('(max-width: 640px)').matches;
+            const desiredHeight = Math.min(window.innerHeight * 0.7, 352);
+
+            if (isMobile) {
+                const spaceBelow = window.innerHeight - rect.bottom - MARGIN * 2;
+                const spaceAbove = rect.top - MARGIN * 2;
+                const openBelow = spaceBelow >= Math.min(desiredHeight, 260) || spaceBelow >= spaceAbove;
+                const maxHeight = Math.max(180, Math.min(desiredHeight, openBelow ? spaceBelow : spaceAbove));
+
+                setDropdownPos({
+                    top: openBelow ? rect.bottom + MARGIN : Math.max(MARGIN, rect.top - maxHeight - MARGIN),
+                    left: MARGIN,
+                    right: MARGIN,
+                    maxHeight,
+                });
+            } else {
+                const DROPDOWN_W = 320; // min-width: 20rem ≈ 320px
+                let left = rect.right - DROPDOWN_W;
+                left = Math.max(MARGIN, Math.min(left, window.innerWidth - DROPDOWN_W - MARGIN));
+                setDropdownPos({ top: rect.bottom + MARGIN, left, right: 'auto', maxHeight: 352 });
+            }
         }
         setMarketOpen(o => !o);
     }, [isRunning, marketOpen]);
@@ -529,6 +550,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const selectStrategy = useCallback((nextStrategy: StrategyId) => {
         setStrategyId(nextStrategy);
+        setStrategySelected(true);
         const e = eng.current;
         e.strategyId = nextStrategy;
         e.entryDigit = null;
@@ -544,6 +566,12 @@ const OverUnderEngine: React.FC = observer(() => {
             );
         }
     }, []);
+
+    const goBackToStrategies = useCallback(() => {
+        if (eng.current.running) stopEngine('Strategy selection reopened');
+        setMarketOpen(false);
+        setStrategySelected(false);
+    }, [stopEngine]);
 
     // ── settle ────────────────────────────────────────────────────────────────
 
@@ -1020,9 +1048,65 @@ const OverUnderEngine: React.FC = observer(() => {
 
     return (
         <div className='oue'>
+            {!strategySelected && (
+                <section className='oue__strategy-picker' aria-labelledby='oue-strategy-picker-title'>
+                    <div className='oue__strategy-picker-header'>
+                        <span className='oue__title-icon'>🤖</span>
+                        <div>
+                            <h1 id='oue-strategy-picker-title'>AI BOTS</h1>
+                            <p>Select a strategy to open its complete trading workspace.</p>
+                        </div>
+                    </div>
+                    <div className='oue__strategy-cards' role='list' aria-label='AI bot strategies'>
+                        <button
+                            type='button'
+                            role='listitem'
+                            className='oue__strategy-card'
+                            onClick={() => selectStrategy('dual')}
+                        >
+                            <span className='oue__strategy-card-badge' style={{ background: 'linear-gradient(135deg, #20d4d4, #d6b35a)' }}>↕</span>
+                            <span className='oue__strategy-card-content'>
+                                <span className='oue__strategy-card-title'>Dual Over / Under</span>
+                                <span className='oue__strategy-card-meta'>OVER 5 + UNDER 4 · BALANCED</span>
+                                <span className='oue__strategy-card-description'>Trade both sides of the digit range with the original paired AI bot.</span>
+                            </span>
+                            <span className='oue__strategy-card-action'>OPEN</span>
+                        </button>
+                        {STRATEGY_ORDER.map(id => {
+                            const definition = STRATEGY_DEFINITIONS[id];
+                            return (
+                                <button
+                                    key={id}
+                                    type='button'
+                                    role='listitem'
+                                    className='oue__strategy-card'
+                                    style={{ '--strategy-color': definition.badgeColor } as React.CSSProperties}
+                                    onClick={() => selectStrategy(id)}
+                                >
+                                    <span className='oue__strategy-card-badge' style={{ background: definition.badgeColor }}>{definition.badge}</span>
+                                    <span className='oue__strategy-card-content'>
+                                        <span className='oue__strategy-card-title'>{definition.label}</span>
+                                        <span className='oue__strategy-card-meta'>
+                                            {definition.winProbabilityPct}% WIN · {definition.risk.toUpperCase()} RISK
+                                        </span>
+                                        <span className='oue__strategy-card-description'>{definition.intro}</span>
+                                    </span>
+                                    <span className='oue__strategy-card-action'>OPEN</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </section>
+            )}
 
-            {/* ── digit strip ── */}
-            <div className='oue__header'>
+            {strategySelected && (<>
+                <button type='button' className='oue__back-to-strategies' onClick={goBackToStrategies}>
+                    <span aria-hidden='true'>←</span>
+                    Back to strategies
+                </button>
+
+                {/* ── digit strip ── */}
+                <div className='oue__header'>
                 <div className='oue__title'>
                     <span className='oue__title-icon'>🤖</span>
                     <span>{isSingleStrategyMode ? `${activeStrategyDef?.label.toUpperCase()} AI BOT` : 'AI BOTS'}</span>
@@ -1080,7 +1164,13 @@ const OverUnderEngine: React.FC = observer(() => {
                             <div
                                 ref={marketDropdownRef}
                                 className='oue__market-dropdown'
-                                style={{ top: dropdownPos.top, left: dropdownPos.left, right: 'auto' }}
+                                style={{
+                                    top: dropdownPos.top,
+                                    left: dropdownPos.left,
+                                    right: dropdownPos.right,
+                                    maxHeight: dropdownPos.maxHeight,
+                                    transform: 'none',
+                                }}
                             >
                                 <div className='oue__market-category'>CONTINUOUS INDICES</div>
                                 <div className='oue__market-list'>
@@ -1195,26 +1285,6 @@ const OverUnderEngine: React.FC = observer(() => {
                     <span className='oue__strategy-pill'>
                         {strategyId === 'dual' ? 'Dual Over/Under' : STRATEGY_DEFINITIONS[strategyId].label}
                     </span>
-                </div>
-                <div className='oue__strategy-tabs'>
-                    <button
-                        type='button'
-                        className={`oue__strategy-tab${strategyId === 'dual' ? ' oue__strategy-tab--active' : ''}`}
-                        onClick={() => selectStrategy('dual')}
-                    >
-                        Dual
-                    </button>
-                    {STRATEGY_ORDER.map(id => (
-                        <button
-                            key={id}
-                            type='button'
-                            className={`oue__strategy-tab${strategyId === id ? ' oue__strategy-tab--active' : ''}`}
-                            onClick={() => selectStrategy(id)}
-                            style={strategyId === id ? { background: STRATEGY_DEFINITIONS[id].badgeColor } : undefined}
-                        >
-                            {STRATEGY_DEFINITIONS[id].label}
-                        </button>
-                    ))}
                 </div>
                 {strategyId !== 'dual' && (
                     <div className='oue__single-stats'>
@@ -1488,8 +1558,7 @@ const OverUnderEngine: React.FC = observer(() => {
                     )}
                 </div>
             </div>
-
-
+            </>)}
         </div>
     );
 });
