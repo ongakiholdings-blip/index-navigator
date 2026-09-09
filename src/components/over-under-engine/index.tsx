@@ -363,7 +363,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const checkLimits = useCallback((): boolean => {
         const { totalProfit: profit, takeProfit: tp, stopLoss: sl } = eng.current;
-        if (profit >= tp) {
+        if (tp > 0 && profit >= tp) {
             const amount = profit.toFixed(2);
             botNotification(`🎉 Take profit reached — congratulations! You won ${amount}`, undefined, {
                 type: 'success',
@@ -374,7 +374,7 @@ const OverUnderEngine: React.FC = observer(() => {
             stopEngine(`✅ Take Profit hit (+${amount})`);
             return true;
         }
-        if (profit <= -sl) {
+        if (sl > 0 && profit <= -sl) {
             const amount = Math.abs(profit).toFixed(2);
             botNotification(`🛑 Stop loss reached — the session ended at -${amount}`, undefined, {
                 type: 'error',
@@ -847,9 +847,9 @@ const OverUnderEngine: React.FC = observer(() => {
         if (!api_base.api) { setStatusMsg('⚠ Not connected — please log in first'); return; }
 
         const resolvedStrategy = strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[strategyId];
-        const strategyTakeProfit = resolvedStrategy ? resolvedStrategy.takeProfit : takeProfitValue;
-        const strategyStopLoss = resolvedStrategy ? resolvedStrategy.stopLoss : stopLossValue;
-        eng.current = makeInitState(stakeValue, martingaleValue, strategyTakeProfit, strategyStopLoss, entryMode, strategyId, martingaleEnabled);
+        // Risk controls always come from the values entered in the active form.
+        // Strategy recommendations are informational and must not replace them.
+        eng.current = makeInitState(stakeValue, martingaleValue, takeProfitValue, stopLossValue, entryMode, strategyId, martingaleEnabled);
         eng.current.running = true;
         if (resolvedStrategy) {
             eng.current.baseStake = stakeValue;
