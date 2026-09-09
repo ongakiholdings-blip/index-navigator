@@ -138,6 +138,23 @@
             &--stop { background: #c73555; border-color: #c73555; }
         }
 
+        &__start-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.6rem;
+        }
+
+        &__start-btn--demo-real {
+            background: #0b8f8b;
+            border-color: #0b8f8b;
+        }
+
+        &__start-btn--api {
+            background: #7b36c7;
+            border-color: #7b36c7;
+        }
+
         &__section {
             padding: 2rem 0;
             border-bottom: 1px solid #dfd3f4;
@@ -208,6 +225,7 @@
             padding: 1rem;
             &__panel { padding: 1.6rem; }
             &__panel-header { align-items: flex-start; flex-direction: column; }
+            &__start-actions { width: 100%; }
             &__start-btn { width: 100%; }
             &__section-heading { align-items: flex-start; flex-direction: column; }
             &__token-row { align-items: stretch; flex-direction: column; }

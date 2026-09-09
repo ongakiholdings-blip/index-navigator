@@ -138,6 +138,9 @@ const CopyTrading = observer(() => {
     const sourceAccount = ct.leader_account;
     const hasActiveFollower = connectedFollowers.length > 0;
     const canStart = ct.leader_status === 'connected' && !ct.is_running && hasActiveFollower;
+    const hasOnlyRealDestinations = connectedFollowers.every(follower => !follower.account?.is_virtual);
+    const canStartDemoToReal = canStart && !!sourceAccount?.is_virtual && hasOnlyRealDestinations;
+    const canActivateApiTrades = canStart && sourceAccount?.is_virtual === false;
     const canStop = ct.is_running;
     const connectionSummary = ct.is_running
         ? localize('Copy trading is active and listening for new trades.')
@@ -186,9 +189,24 @@ const CopyTrading = observer(() => {
                             <IconStop /> {localize('Stop')}
                         </button>
                     ) : (
-                        <button className='ct2__start-btn' onClick={() => void ct.startCopying()} disabled={!canStart}>
-                            <IconPlay /> {localize('Start')}
-                        </button>
+                        <div className='ct2__start-actions'>
+                            <button
+                                className='ct2__start-btn ct2__start-btn--demo-real'
+                                onClick={() => void ct.startCopying()}
+                                disabled={!canStartDemoToReal}
+                                title={localize('Copy trades from the logged-in demo account to real destinations')}
+                            >
+                                <IconPlay /> {localize('Start Demo → Real')}
+                            </button>
+                            <button
+                                className='ct2__start-btn ct2__start-btn--api'
+                                onClick={() => void ct.startCopying()}
+                                disabled={!canActivateApiTrades}
+                                title={localize('Activate copying to the destination API token')}
+                            >
+                                <IconPlay /> {localize('Activate API Trades')}
+                            </button>
+                        </div>
                     )}
                 </header>
 
