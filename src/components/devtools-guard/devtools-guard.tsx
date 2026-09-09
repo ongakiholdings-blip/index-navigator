@@ -26,14 +26,20 @@ const SOCIAL_LINKS = [
     { label: 'Instagram', href: 'https://www.instagram.com/index_navigator?igsi=eDE0Yzg3Z2swZHEz' },
 ];
 
-function detectDevToolsOpen() {
+function detectDevToolsOpen(initialViewport?: { width: number; height: number; outerWidth: number; outerHeight: number }) {
     if (typeof window === 'undefined') return false;
 
     const widthDiff = window.outerWidth - window.innerWidth;
     const heightDiff = window.outerHeight - window.innerHeight;
     const isLarge = widthDiff > DIMENSION_THRESHOLD || heightDiff > DIMENSION_THRESHOLD;
+    const viewportChangedByEmulation =
+        initialViewport &&
+        window.outerWidth === initialViewport.outerWidth &&
+        window.outerHeight === initialViewport.outerHeight &&
+        (Math.abs(window.innerWidth - initialViewport.width) > DIMENSION_THRESHOLD ||
+            Math.abs(window.innerHeight - initialViewport.height) > DIMENSION_THRESHOLD);
 
-    let isOpened = isLarge;
+    let isOpened = isLarge || !!viewportChangedByEmulation;
 
     try {
         const start = performance.now();
@@ -56,8 +62,15 @@ const DevToolsGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     useEffect(() => {
         if (!DEVTOOLS_GUARD_ENABLED) return;
 
+        const initialViewport = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            outerWidth: window.outerWidth,
+            outerHeight: window.outerHeight,
+        };
+
         const check = () => {
-            const open = detectDevToolsOpen();
+            const open = detectDevToolsOpen(initialViewport);
             if (open && !devtoolsOpen) {
                 setDevtoolsOpen(true);
             }
@@ -68,6 +81,7 @@ const DevToolsGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         };
 
         const intervalId = window.setInterval(check, DETECTION_INTERVAL);
+        window.addEventListener('resize', check, true);
         check();
 
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -94,10 +108,11 @@ const DevToolsGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
         return () => {
             window.clearInterval(intervalId);
+            window.removeEventListener('resize', check, true);
             window.removeEventListener('keydown', handleKeyDown, true);
             if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
         };
-    }, [devtoolsOpen]);
+    }, []);
 
     const overlay = useMemo(
         () => (
