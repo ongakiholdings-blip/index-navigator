@@ -439,7 +439,19 @@ export default class CopyTradingStore {
         try {
             const currentLoginid = this.leader_account?.loginid || '';
             const storedAccounts = JSON.parse(sessionStorage.getItem('deriv_accounts') || '[]') as DerivAccount[];
-            const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, string>;
+            const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, unknown>;
+            const clientAccounts = JSON.parse(localStorage.getItem('clientAccounts') || '{}') as Record<string, unknown>;
+            const activeToken = localStorage.getItem('authToken') || sessionStorage.getItem('api_token_direct') || '';
+            const getStoredToken = (loginid: string | null) => {
+                if (!loginid) return '';
+                const directToken = tokenMap[loginid];
+                if (typeof directToken === 'string') return directToken;
+                const account = clientAccounts[loginid];
+                if (account && typeof account === 'object' && 'token' in account) {
+                    return String((account as { token?: unknown }).token || '');
+                }
+                return loginid === currentLoginid ? activeToken : '';
+            };
             let demoLoginid = this.leader_account?.is_virtual ? currentLoginid : null;
             let realLoginid = this.leader_account?.is_virtual ? null : currentLoginid;
 
@@ -455,8 +467,8 @@ export default class CopyTradingStore {
                 realLoginid = realLoginid || storedAccounts.find(account => account.account_type === 'real')?.account_id || null;
             }
 
-            const demoToken = demoLoginid ? tokenMap[demoLoginid] : '';
-            const destinationToken = realLoginid ? tokenMap[realLoginid] : '';
+            const demoToken = getStoredToken(demoLoginid);
+            const destinationToken = getStoredToken(realLoginid);
 
             if (!demoToken || !destinationToken) {
                 this.leader_error = 'The paired demo and real accounts are not available in the logged-in session';
