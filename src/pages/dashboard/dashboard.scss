@@ -23,6 +23,218 @@
         text-shadow: 0 0.15rem 0.4rem rgb(0 0 0 / 70%) !important;
     }
 
+    /* Free Bots normal-card template: deep blue water, cyan edge light and
+       animated liquid highlights for Dashboard actions and testimonials. */
+    .tab__dashboard__table__block,
+    .trader-voices__card {
+        background:
+            radial-gradient(circle at 18% 18%, rgb(224 242 254 / 12%) 0 0.12rem, transparent 0.22rem),
+            radial-gradient(circle at 78% 28%, rgb(224 242 254 / 10%) 0 0.18rem, transparent 0.3rem),
+            linear-gradient(110deg, #001d4a 0%, #001d4a 50%, #005d82 50%, #004567 100%) !important;
+        background-size: 6rem 5rem, 9rem 7rem, 100% 100%;
+        border: 1px solid transparent !important;
+        box-shadow:
+            0 0.9rem 2rem rgb(0 0 0 / 42%),
+            0 0 1.4rem rgb(6 182 212 / 18%),
+            inset 0 1px 0 rgb(224 242 254 / 18%) !important;
+        overflow: hidden;
+        position: relative;
+        isolation: isolate;
+        animation: dashboard-normal-card-pulse 3s ease-in-out infinite;
+
+        &::before {
+            background: conic-gradient(
+                from 0deg,
+                #3b82f6 0deg,
+                #06b6d4 60deg,
+                #e0f2fe 120deg,
+                #06b6d4 180deg,
+                #3b82f6 240deg,
+                #0ea5e9 300deg,
+                #3b82f6 360deg
+            ) !important;
+            border-radius: inherit;
+            content: '';
+            inset: 0;
+            opacity: 1 !important;
+            padding: 1.5px;
+            position: absolute;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: dashboard-normal-spin 4s linear infinite;
+            z-index: 0;
+        }
+
+        &::after {
+            background:
+                linear-gradient(180deg, rgb(224 242 254 / 22%), transparent 58%),
+                radial-gradient(ellipse at 50% 0%, rgb(224 242 254 / 36%), transparent 58%);
+            border-top: 2px solid rgb(224 242 254 / 48%);
+            border-radius: 50%;
+            content: '';
+            height: 48%;
+            left: -10%;
+            opacity: 0.72;
+            pointer-events: none;
+            position: absolute;
+            top: 38%;
+            transform: translateX(-4%) rotate(-1deg);
+            width: 120%;
+            animation: dashboard-normal-wave 6s ease-in-out infinite;
+            z-index: 0;
+        }
+
+        > * {
+            position: relative;
+            z-index: 1;
+        }
+    }
+
+    .tab__dashboard__table__block {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+        &:hover {
+            animation: none;
+            transform: translateY(-0.35rem) scale(1.015);
+            box-shadow:
+                0 0 0 3px rgb(59 130 246 / 18%),
+                0 0 2.8rem rgb(6 182 212 / 28%),
+                0 1.2rem 3.2rem rgb(0 0 0 / 56%) !important;
+        }
+
+        .tab__dashboard__table__images {
+            background: linear-gradient(135deg, rgb(59 130 246 / 20%), rgb(6 182 212 / 14%)) !important;
+            border: 1px solid rgb(59 130 246 / 50%) !important;
+            box-shadow: 0 0 0 3px rgb(59 130 246 / 10%), 0 0 1.2rem rgb(6 182 212 / 18%) !important;
+        }
+
+        .dc-text {
+            color: #e0f2fe !important;
+            font-weight: 800 !important;
+            text-shadow: 0 0 0.5rem rgb(6 182 212 / 42%);
+        }
+    }
+
+    .trader-voices__card {
+        opacity: 0.82;
+        transform: scale(0.97);
+        transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+
+        &--active,
+        &:hover {
+            opacity: 1;
+            transform: scale(1.02) translateY(-0.25rem);
+            box-shadow:
+                0 0 0 3px rgb(59 130 246 / 16%),
+                0 0 2.4rem rgb(6 182 212 / 24%),
+                0 1rem 2.8rem rgb(0 0 0 / 52%) !important;
+        }
+
+        .trader-voices__avatar {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4) !important;
+            box-shadow: 0 0 1rem rgb(6 182 212 / 42%);
+        }
+
+        .trader-voices__name,
+        .trader-voices__quote {
+            color: #e0f2fe !important;
+        }
+
+        .trader-voices__stars {
+            color: #bae6fd !important;
+            text-shadow: 0 0 0.4rem rgb(6 182 212 / 60%);
+        }
+    }
+
+    @keyframes dashboard-normal-card-pulse {
+        0%, 100% { box-shadow: 0 0.9rem 2rem rgb(0 0 0 / 42%), 0 0 1.4rem rgb(6 182 212 / 18%), inset 0 1px 0 rgb(224 242 254 / 18%); }
+        50% { box-shadow: 0 1rem 2.2rem rgb(0 0 0 / 48%), 0 0 2rem rgb(6 182 212 / 30%), inset 0 1px 0 rgb(224 242 254 / 24%); }
+    }
+
+    @keyframes dashboard-normal-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes dashboard-normal-wave {
+        0%, 100% { transform: translateX(-4%) rotate(-1deg); }
+        50% { transform: translateX(4%) rotate(1deg); }
+    }
+
+    /* ─────────────────────────────────────────────────────────────
+       LIQUID DASHBOARD BACKDROP — loader-inspired teal, cyan and gold
+       ───────────────────────────────────────────────────────────── */
+    .tab__dashboard__content {
+        isolation: isolate;
+        overflow: hidden;
+        position: relative;
+
+        &::before,
+        &::after {
+            content: '';
+            inset: -16%;
+            pointer-events: none;
+            position: absolute;
+        }
+
+        &::before {
+            animation: dashboard-liquid-drift 18s ease-in-out infinite;
+            background:
+                radial-gradient(ellipse at 12% 18%, rgb(53 215 208 / 18%) 0 8%, transparent 32%),
+                radial-gradient(ellipse at 86% 10%, rgb(247 197 59 / 12%) 0 9%, transparent 30%),
+                radial-gradient(ellipse at 62% 84%, rgb(34 188 196 / 16%) 0 13%, transparent 38%),
+                radial-gradient(circle at 20% 72%, rgb(215 255 251 / 18%) 0 0.12rem, transparent 0.22rem),
+                radial-gradient(circle at 78% 64%, rgb(215 255 251 / 14%) 0 0.18rem, transparent 0.3rem),
+                linear-gradient(125deg, transparent 24%, rgb(53 215 208 / 8%) 47%, transparent 70%);
+            background-size: 72% 88%, 70% 76%, 84% 92%, 10rem 8rem, 14rem 11rem, 150% 150%;
+            filter: blur(1.2rem) saturate(1.25);
+            opacity: 0.95;
+            z-index: 0;
+        }
+
+        &::after {
+            animation: dashboard-liquid-wave 12s ease-in-out infinite;
+            background:
+                linear-gradient(180deg, rgb(215 255 251 / 10%), transparent 68%),
+                radial-gradient(ellipse at 50% 12%, transparent 0 22%, rgb(53 215 208 / 12%) 23% 24%, transparent 25% 37%, rgb(247 197 59 / 7%) 38% 39%, transparent 40%);
+            background-size: 100% 100%, 54rem 28rem;
+            border-top: 1px solid rgb(215 255 251 / 20%);
+            border-radius: 48% 52% 0 0 / 12% 18% 0 0;
+            mix-blend-mode: screen;
+            opacity: 0.75;
+            transform: translateX(-3%) rotate(-1deg);
+            z-index: 0;
+        }
+
+        > * {
+            position: relative;
+            z-index: 1;
+        }
+    }
+
+    @keyframes dashboard-liquid-drift {
+        0%, 100% {
+            background-position: 0% 10%, 100% 0%, 15% 100%, 12% 80%, 82% 58%, 0% 50%;
+            transform: rotate(-1deg) scale(1);
+        }
+        50% {
+            background-position: 22% 34%, 72% 24%, 82% 68%, 28% 60%, 68% 82%, 100% 42%;
+            transform: rotate(2deg) scale(1.06);
+        }
+    }
+
+    @keyframes dashboard-liquid-wave {
+        0%, 100% { background-position: 0% 0%, 50% 12%; transform: translateX(-3%) rotate(-1deg) scaleX(1); }
+        50% { background-position: 100% 100%, 56% 22%; transform: translateX(4%) rotate(2deg) scaleX(1.08); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .tab__dashboard__content::before,
+        .tab__dashboard__content::after {
+            animation: none;
+        }
+    }
+
 
     /* Dashboard readability: preserve the trading backdrop while prioritizing task content. */
     @include mobile-or-tablet-screen {
