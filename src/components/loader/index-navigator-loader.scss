@@ -54,7 +54,7 @@
         display: flex;
         flex-direction: column;
         max-width: 44rem;
-        padding: 2rem;
+        padding: clamp(1.25rem, 4vw, 2rem);
         position: relative;
         text-align: center;
         width: min(100%, 44rem);
@@ -426,11 +426,46 @@
 
 @media (max-width: 460px) {
     .index-navigator-loader {
-        &__orb { height: 17rem; width: 17rem; }
-        &__app { small { display: none; } &--youtube { left: 9%; top: -10rem; } &--tiktok { left: 24%; top: -6.5rem; } &--whatsapp { left: 66%; top: -10rem; } &--telegram { left: 82%; top: -6.5rem; } &--instagram { left: 10%; top: -1rem; } &--deriv { left: 82%; top: -1rem; } &--mt5 { top: -14rem; } }
+        align-items: flex-start;
+        overflow-y: auto;
+
+        &__content {
+            min-height: 100%;
+            justify-content: center;
+            padding: 1.1rem 0.85rem;
+        }
+
+        &__topline,
+        &__footer {
+            font-size: 0.62rem;
+            letter-spacing: 0.06em;
+        }
+
+        &__orb {
+            height: clamp(12rem, 58vw, 17rem);
+            margin: 0.5rem 0 1rem;
+            width: clamp(12rem, 58vw, 17rem);
+        }
+
+        &__app {
+            small { display: none; }
+            b { height: 1.7rem; width: 1.7rem; }
+            &--youtube { left: 9%; top: -8rem; }
+            &--tiktok { left: 24%; top: -5.5rem; }
+            &--whatsapp { left: 66%; top: -8rem; }
+            &--telegram { left: 82%; top: -5.5rem; }
+            &--instagram { left: 10%; top: -1rem; }
+            &--deriv { left: 82%; top: -1rem; }
+            &--mt5 { top: -11rem; }
+        }
+
+        h1 { font-size: clamp(1.7rem, 8vw, 2.2rem); }
+        p { font-size: 0.82rem; margin-top: 0.55rem; }
+        &__modules { margin-top: 1.25rem; }
         &__module { gap: 0.45rem; padding: 0.65rem; }
         &__module-icon { height: 1.9rem; width: 1.9rem; }
-        &__route { width: 2rem; }
-        &__footer { font-size: 0.65rem; }
+        &__module small { font-size: 0.62rem; }
+        &__route { width: 1.5rem; }
+        &__footer { margin-top: 1.25rem; padding-top: 0.7rem; }
     }
 }

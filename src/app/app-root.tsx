@@ -35,11 +35,11 @@ const AppRoot = () => {
     const [is_loader_visible, setIsLoaderVisible] = useState(true);
 
     useEffect(() => {
-        // Keep the startup experience visible for ten seconds while initialization continues in the background.
-        const loaderTimer = setTimeout(() => setIsLoaderVisible(false), 10000);
+        let loaderTimer: ReturnType<typeof setTimeout> | undefined;
         const timeoutId = setTimeout(() => {
             if (!is_api_initialized) {
                 setIsApiInitialized(true);
+                loaderTimer ??= setTimeout(() => setIsLoaderVisible(false), 650);
             }
         }, 5000);
 
@@ -53,6 +53,7 @@ const AppRoot = () => {
                     api_base_initialized.current = false;
                 } finally {
                     setIsApiInitialized(true);
+                    loaderTimer ??= setTimeout(() => setIsLoaderVisible(false), 650);
                     clearTimeout(timeoutId);
                 }
             }
@@ -60,7 +61,7 @@ const AppRoot = () => {
 
         initializeApi();
         return () => {
-            clearTimeout(loaderTimer);
+            if (loaderTimer) clearTimeout(loaderTimer);
             clearTimeout(timeoutId);
         };
     }, []);

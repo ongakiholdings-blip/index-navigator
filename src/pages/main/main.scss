@@ -37,6 +37,17 @@
     50% { transform: translate3d(1.5rem, 1rem, 0) scale(1.05); }
 }
 
+@keyframes main-tab-enter {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 0.5rem, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
 .run-panel {
     // fix for the RTL issue on tab active line
     .dc-tabs__active-line {
@@ -436,6 +447,11 @@
                 min-height: 0;
                 overflow: hidden;
 
+                > * {
+                    animation: main-tab-enter 220ms ease-out both;
+                    will-change: opacity, transform;
+                }
+
                 .dashboard__chart-wrapper {
                     height: 100%;
                 }
@@ -456,7 +472,7 @@
             &__active-line {
                 background: linear-gradient(90deg, #20d4d4, #d6b35a);
                 box-shadow: 0 0 8px rgb(32 212 212 / 70%);
-                transition: none;
+                transition: left 220ms ease-out, width 220ms ease-out;
             }
 
             &__item {
@@ -530,6 +546,12 @@
                                 overflow-x: auto;
                                 padding: 0.8rem 1.6rem 0;
                             }
+                        }
+                    }
+
+                    @media (prefers-reduced-motion: reduce) {
+                        .dc-tabs__content--main__tabs > * {
+                            animation: none !important;
                         }
                     }
                 }
