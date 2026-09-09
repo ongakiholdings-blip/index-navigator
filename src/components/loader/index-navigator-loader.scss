@@ -19,6 +19,36 @@
     width: 100vw;
     z-index: 1000;
 
+    &::before,
+    &::after {
+        content: '';
+        inset: -18%;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    &::before {
+        animation: loader-liquid-flow 18s ease-in-out infinite;
+        background:
+            radial-gradient(ellipse at 18% 24%, rgb(53 215 208 / 22%) 0 8%, transparent 34%),
+            radial-gradient(ellipse at 78% 18%, rgb(247 197 59 / 15%) 0 9%, transparent 30%),
+            radial-gradient(ellipse at 64% 78%, rgb(34 188 196 / 18%) 0 12%, transparent 38%),
+            linear-gradient(122deg, transparent 22%, rgb(53 215 208 / 8%) 46%, transparent 70%);
+        background-size: 72% 86%, 68% 74%, 80% 88%, 150% 150%;
+        filter: blur(1.8rem) saturate(1.3);
+        opacity: 0.9;
+    }
+
+    &::after {
+        animation: loader-liquid-ripples 11s ease-in-out infinite;
+        background:
+            radial-gradient(ellipse at 50% 52%, transparent 0 22%, rgb(53 215 208 / 10%) 23% 24%, transparent 25% 35%, rgb(247 197 59 / 7%) 36% 37%, transparent 38%),
+            linear-gradient(160deg, transparent 28%, rgb(215 255 251 / 5%) 42%, transparent 54%);
+        background-size: 46rem 32rem, 100% 100%;
+        mix-blend-mode: screen;
+        opacity: 0.8;
+    }
+
     &__content {
         align-items: center;
         display: flex;
@@ -28,6 +58,7 @@
         position: relative;
         text-align: center;
         width: min(100%, 44rem);
+        z-index: 1;
     }
 
     &__topline,
@@ -72,7 +103,9 @@
     }
 
     &__orb-layer,
-    &__orb-glow {
+    &__orb-glow,
+    &__orb-waterline,
+    &__orb-bubbles {
         inset: 14%;
         position: absolute;
     }
@@ -105,6 +138,39 @@
             background: linear-gradient(315deg, rgb(53 215 208 / 52%), rgb(6 92 91 / 50%));
             opacity: 0.82;
             transform: rotate(235deg) scale(0.94);
+        }
+    }
+
+    &__orb-waterline {
+        animation: loader-waterline 5.5s ease-in-out infinite;
+        background:
+            linear-gradient(180deg, rgb(215 255 251 / 38%), rgb(53 215 208 / 12%) 55%, transparent),
+            radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 58%), transparent 58%);
+        border-top: 2px solid rgb(218 255 250 / 72%);
+        border-radius: 50%;
+        height: 48%;
+        inset: 39% 4% auto;
+        opacity: 0.78;
+        transform: translateX(-3%) rotate(-2deg);
+        z-index: 2;
+    }
+
+    &__orb-bubbles {
+        background:
+            radial-gradient(circle at 18% 80%, rgb(255 255 255 / 58%) 0 0.18rem, transparent 0.3rem),
+            radial-gradient(circle at 70% 60%, rgb(255 255 255 / 42%) 0 0.12rem, transparent 0.22rem),
+            radial-gradient(circle at 86% 88%, rgb(255 255 255 / 48%) 0 0.1rem, transparent 0.18rem);
+        background-repeat: no-repeat;
+        opacity: 0.7;
+        z-index: 3;
+
+        &--one {
+            animation: loader-bubbles-one 5s linear infinite;
+        }
+
+        &--two {
+            animation: loader-bubbles-two 6.5s linear infinite 1.2s;
+            transform: scale(0.76);
         }
     }
 
@@ -145,6 +211,17 @@
         position: absolute;
         transform: translate(-50%, -50%);
         animation-delay: calc(var(--app-index) * -0.4s);
+        color: inherit;
+        text-decoration: none;
+        transition: border-color 0.2s ease, filter 0.2s ease;
+
+        &:focus-visible,
+        &:hover {
+            border-color: var(--app-color, var(--loader-teal));
+            filter: brightness(1.2);
+            outline: 2px solid var(--app-color, var(--loader-teal));
+            outline-offset: 0.2rem;
+        }
 
         b {
             align-items: center;
@@ -285,6 +362,14 @@
 @keyframes loader-float {
     50% { transform: translateY(-0.8rem); }
 }
+@keyframes loader-liquid-flow {
+    0%, 100% { background-position: 0% 10%, 100% 0%, 15% 100%, 0% 50%; transform: rotate(-2deg) scale(1); }
+    50% { background-position: 22% 34%, 72% 24%, 82% 68%, 100% 42%; transform: rotate(3deg) scale(1.08); }
+}
+@keyframes loader-liquid-ripples {
+    0%, 100% { background-position: 50% 52%, 0% 0%; transform: scale(0.96) rotate(0deg); }
+    50% { background-position: 56% 46%, 100% 100%; transform: scale(1.08) rotate(-3deg); }
+}
 
 @keyframes loader-morph-one {
     0%, 100% { border-radius: 52% 48% 42% 58% / 44% 55% 45% 56%; transform: rotate(15deg) scale(1); }
@@ -303,6 +388,20 @@
 
 @keyframes loader-breathe {
     50% { opacity: 0.4; transform: scale(0.88); }
+}
+@keyframes loader-waterline {
+    0%, 100% { transform: translateX(-3%) rotate(-2deg) scaleX(1); }
+    50% { transform: translateX(4%) rotate(2deg) scaleX(1.08); }
+}
+@keyframes loader-bubbles-one {
+    0% { opacity: 0; transform: translateY(1.8rem) scale(0.86); }
+    25%, 75% { opacity: 0.72; }
+    100% { opacity: 0; transform: translateY(-3.4rem) scale(1.04); }
+}
+@keyframes loader-bubbles-two {
+    0% { opacity: 0; transform: translateY(2rem) scale(0.72); }
+    30%, 78% { opacity: 0.58; }
+    100% { opacity: 0; transform: translateY(-3.8rem) scale(0.94); }
 }
 
 @keyframes loader-dot {
