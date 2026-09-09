@@ -139,16 +139,87 @@
 
 @media (max-width: 640px) {
     .tutorials-page {
+        display: flex;
+        flex-direction: column;
         min-height: calc(100vh - 7rem);
     }
 
     .tutorials-page__sidebar {
-        flex-basis: 8.5rem;
-        padding: 0.8rem 0.45rem;
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        flex: 0 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.7rem 0.75rem 0.65rem;
+        background:
+            linear-gradient(145deg, rgb(0 29 74 / 98%), rgb(0 69 103 / 98%)),
+            #001d4a;
+        border-bottom: 1px solid rgb(6 182 212 / 48%);
+        box-shadow:
+            0 0.55rem 1.2rem rgb(0 0 0 / 22%),
+            inset 0 -1px 0 rgb(224 242 254 / 16%);
+    }
+
+    .tutorials-page__search {
+        width: 100%;
+        height: 2.35rem;
+        box-sizing: border-box;
+        border-color: rgb(224 242 254 / 28%);
+        border-radius: 0.7rem;
+        background: rgb(0 29 74 / 72%);
+        color: #bae6fd;
+
+        input {
+            color: #e0f2fe;
+            font-size: 0.8rem;
+
+            &::placeholder {
+                color: rgb(224 242 254 / 68%);
+            }
+        }
+    }
+
+    .tutorials-page__sidebar nav {
+        display: flex;
+        gap: 0.45rem;
+        margin-top: 0.6rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .tutorials-page__nav-item {
+        flex: 0 0 auto;
+        width: auto;
+        min-height: 2.15rem;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid rgb(224 242 254 / 18%);
+        border-radius: 0.6rem;
+        background: rgb(0 29 74 / 42%);
+        color: #bae6fd;
+        font-size: 0.74rem;
+        font-weight: 700;
+        white-space: nowrap;
+
+        &--active {
+            border-color: rgb(224 242 254 / 58%);
+            background: linear-gradient(110deg, #005d82, #06b6d4);
+            color: #fff;
+            box-shadow: 0 0 1rem rgb(6 182 212 / 30%);
+        }
     }
 
     .tutorials-page__content {
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+        box-sizing: border-box;
         padding: 1.2rem 0.75rem;
+        overflow-x: hidden;
     }
 
     .tutorials-wrap__group__guides {
