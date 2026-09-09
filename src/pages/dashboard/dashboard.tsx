@@ -1,6 +1,7 @@
 import React from 'react';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import Text from '@/components/shared_ui/text';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
@@ -173,7 +174,7 @@ const DashboardComponent = observer(({ handleTabChange }: TMobileIconGuide) => {
                 </div>
             </div>
             <InfoPanel />
-            {active_tab === 0 && <OnboardTourHandler is_mobile={!isDesktop} />}
+            {active_tab === DBOT_TABS.DASHBOARD && <OnboardTourHandler is_mobile={!isDesktop} />}
         </React.Fragment>
     );
 });

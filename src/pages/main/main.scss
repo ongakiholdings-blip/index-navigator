@@ -72,6 +72,32 @@
         padding: 0;
     }
 
+    .deriv-homes-placeholder {
+        align-items: center;
+        background:
+            radial-gradient(circle at 20% 20%, rgb(53 215 208 / 18%), transparent 28%),
+            linear-gradient(145deg, #001d4a, #004567);
+        color: #e0f2fe;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100%;
+        padding: 3rem 1.5rem;
+        text-align: center;
+
+        h1 {
+            color: #fff;
+            font-size: clamp(2rem, 6vw, 4rem);
+            margin: 0 0 0.8rem;
+        }
+
+        p {
+            color: #bae6fd;
+            font-size: 1rem;
+            margin: 0;
+        }
+    }
+
     &__tabs-wrapper {
         height: 100%;
         min-height: 100%;

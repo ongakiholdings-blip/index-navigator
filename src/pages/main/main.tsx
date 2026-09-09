@@ -40,7 +40,7 @@ import {
     LabelPairedCopyCaptionRegularIcon,
     LabelPairedArrowUpArrowDownCaptionBoldIcon,
 } from '@deriv/quill-icons/LabelPaired';
-import { LegacyGuide1pxIcon } from '@deriv/quill-icons/Legacy';
+import { LegacyGuide1pxIcon, LegacyHomeNewIcon } from '@deriv/quill-icons/Legacy';
 import { Localize, localize } from '@deriv-com/translations';
 import { useDevice } from '@deriv-com/ui';
 import RunPanel from '../../components/run-panel';
@@ -88,7 +88,7 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'signal_zone', 'chart', 'deriv_t_view', 'copy_trading', 'analysis', 'tutorial'];
+    const hash = ['deriv_homes', 'dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'signal_zone', 'chart', 'deriv_t_view', 'copy_trading', 'analysis', 'tutorial'];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -135,9 +135,9 @@ const AppWrapper = observer(() => {
     let tab_value: number | string = active_tab;
     const GetHashedValue = (tab: number) => {
         tab_value = location.hash?.split('#')[1];
-        if (!tab_value) return is_preview_mode ? BOT_BUILDER : tab;
+        if (!tab_value) return is_preview_mode ? BOT_BUILDER : DBOT_TABS.DERIV_HOMES;
         const hashed_tab_index = hash.indexOf(String(tab_value));
-        return hashed_tab_index >= 0 ? hashed_tab_index : is_preview_mode ? BOT_BUILDER : DASHBOARD;
+        return hashed_tab_index >= 0 ? hashed_tab_index : is_preview_mode ? BOT_BUILDER : DBOT_TABS.DERIV_HOMES;
     };
     const active_hash_tab = GetHashedValue(active_tab);
 
@@ -381,6 +381,25 @@ const AppWrapper = observer(() => {
                     <div className='main__tabs-wrapper'>
                         {!isDesktop && left_tab_shadow && <span className='tabs-shadow tabs-shadow--left' />}{' '}
                         <Tabs active_index={active_tab} className='main__tabs' onTabItemClick={handleTabChange} top is_scrollable>
+                            <div
+                                label={
+                                    <>
+                                        <LegacyHomeNewIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                            className='icon-general-fill-g-path'
+                                        />
+                                        <Localize i18n_default_text='Deriv-Homes' />
+                                    </>
+                                }
+                                id='id-deriv-homes'
+                            >
+                                <div className='deriv-homes-placeholder'>
+                                    <h1><Localize i18n_default_text='Deriv-Homes' /></h1>
+                                    <p><Localize i18n_default_text='Your Deriv home is coming soon.' /></p>
+                                </div>
+                            </div>
                             <div
                                 label={
                                     <>

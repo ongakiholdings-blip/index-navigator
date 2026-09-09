@@ -53,7 +53,12 @@ export const LogoMark = ({ height = 32 }: TLogoMarkProps) => {
                     {badgeLetter}
                 </span>
             )}
-            <span className='app-header__logo-text'>{appName}</span>
+            <span className='app-header__logo-copy'>
+                <span className='app-header__logo-text'>{appName}</span>
+                <span className='app-header__logo-powered-by'>
+                    powered by <strong>Deriv</strong>
+                </span>
+            </span>
         </span>
     );
 };

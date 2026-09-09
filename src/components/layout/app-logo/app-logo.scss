@@ -113,7 +113,6 @@
     }
 
     &__logo-text {
-        margin-left: 1.2rem;
         font-weight: 900;
         font-size: 1.9rem;
         white-space: nowrap;
@@ -140,19 +139,47 @@
         filter: drop-shadow(0 0 8px rgb(6 182 212 / 60%));
     }
 
+    &__logo-copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+        margin-left: 1.2rem;
+    }
+
+    &__logo-powered-by {
+        margin-top: 0.05rem;
+        color: var(--text-general, #64748b);
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        text-transform: lowercase;
+        white-space: nowrap;
+
+        strong {
+            color: #ef4444;
+            font-weight: 900;
+        }
+    }
+
     &--mobile {
         .app-header__logo {
             padding-inline-start: 0.8rem;
             padding-inline-end: 0.8rem;
         }
 
-        .app-header__logo-text {
+        .app-header__logo-copy {
             display: none;
         }
     }
 }
 
-.mobile-menu__header .app-header__logo-text {
+.mobile-menu__header .app-header__logo-copy {
     display: block;
     max-width: 180px;
+}
+
+.mobile-menu__header .app-header__logo-powered-by {
+    display: block;
 }

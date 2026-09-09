@@ -1,5 +1,6 @@
 // @ts-nocheck — vendored bot code with known upstream type gaps; see AGENTS.md
 import React from 'react';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import { action, computed, makeObservable, observable, reaction } from 'mobx';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -191,7 +192,7 @@ export default class LoadModalStore {
         });
 
         const { active_tab } = this.root_store.dashboard;
-        if (active_tab === 1) this.toggleLoadModal();
+        if (active_tab === DBOT_TABS.BOT_BUILDER) this.toggleLoadModal();
 
         this.root_store.dashboard.is_dialog_open = false;
     };

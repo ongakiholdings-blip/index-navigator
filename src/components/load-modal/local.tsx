@@ -1,5 +1,6 @@
 // @ts-nocheck — vendored bot code with known upstream type gaps; see AGENTS.md
 import React from 'react';
+import { DBOT_TABS } from '@/constants/bot-contents';
 import classNames from 'classnames';
 import { observer } from 'mobx-react-lite';
 import Button from '@/components/shared_ui/button';
@@ -40,7 +41,7 @@ const LocalComponent = observer(() => {
             <div className='load-strategy__container load-strategy__container--has-footer'>
                 <div
                     className={classNames('load-strategy__local-preview', {
-                        'load-strategy__local-preview--active': active_tab === 1 && active_tour,
+                        'load-strategy__local-preview--active': active_tab === DBOT_TABS.BOT_BUILDER && active_tour,
                     })}
                 >
                     <div className='load-strategy__title'>
