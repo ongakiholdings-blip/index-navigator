@@ -4,6 +4,7 @@ import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } 
 import { cleanupUrl, handleOAuthCallback } from '@/external/deriv-core';
 import LocalStorageSyncWrapper from '@/components/localStorage-sync-wrapper';
 import RoutePromptDialog from '@/components/route-prompt-dialog';
+import DevToolsGuard from '@/components/devtools-guard/devtools-guard';
 import IndexNavigatorLoader from '@/components/loader/index-navigator-loader';
 import { useAccountSwitching } from '@/hooks/useAccountSwitching';
 import { useLanguageFromURL } from '@/hooks/useLanguageFromURL';
@@ -137,7 +138,11 @@ function App() {
         handleCallback();
     }, []);
 
-    return <RouterProvider router={router} />;
+    return (
+        <DevToolsGuard>
+            <RouterProvider router={router} />
+        </DevToolsGuard>
+    );
 }
 
 export default App;
