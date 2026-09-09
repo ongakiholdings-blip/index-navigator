@@ -471,12 +471,19 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-signal-zone'
                             >
-                                <iframe
-                                    src='https://indexnavigator.vercel.app'
-                                    title='Signal-Zone'
-                                    style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                                    allow='clipboard-read; clipboard-write'
-                                />
+                                <div className='external-tab-frame'>
+                                    <div className='external-tab-frame__toolbar'>
+                                        <span><Localize i18n_default_text='Signal-Zone' /></span>
+                                        <a href='https://indexnavigator.vercel.app' target='_blank' rel='noreferrer'>
+                                            <Localize i18n_default_text='Open full screen' />
+                                        </a>
+                                    </div>
+                                    <iframe
+                                        src='https://indexnavigator.vercel.app/'
+                                        title='Signal-Zone'
+                                        allow='clipboard-read; clipboard-write'
+                                    />
+                                </div>
                             </div>
                             <div
                                 label={
@@ -514,12 +521,19 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-deriv-t-view'
                             >
-                                <iframe
-                                    src='https://charts.deriv.com/deriv'
-                                    title='Deriv-T.View'
-                                    style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                                    allow='clipboard-read; clipboard-write'
-                                />
+                                <div className='external-tab-frame'>
+                                    <div className='external-tab-frame__toolbar'>
+                                        <span><Localize i18n_default_text='Deriv-T.View' /></span>
+                                        <a href='https://charts.deriv.com/deriv' target='_blank' rel='noreferrer'>
+                                            <Localize i18n_default_text='Open full screen' />
+                                        </a>
+                                    </div>
+                                    <iframe
+                                        src='https://charts.deriv.com/deriv'
+                                        title='Deriv-T.View'
+                                        allow='clipboard-read; clipboard-write'
+                                    />
+                                </div>
                             </div>
                             <div
                                 label={
