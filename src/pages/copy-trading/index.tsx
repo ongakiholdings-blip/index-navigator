@@ -137,10 +137,7 @@ const CopyTrading = observer(() => {
     const connectedFollowers = ct.followers.filter(f => f.status === 'connected');
     const sourceAccount = ct.leader_account;
     const hasActiveFollower = connectedFollowers.length > 0;
-    const canStart = ct.leader_status === 'connected' && !ct.is_running && hasActiveFollower;
-    const hasOnlyRealDestinations = connectedFollowers.every(follower => !follower.account?.is_virtual);
-    const canStartDemoToReal = canStart && !!sourceAccount?.is_virtual && hasOnlyRealDestinations;
-    const canActivateApiTrades = canStart;
+    const canStartButtons = !ct.is_running;
     const canStop = ct.is_running;
     const connectionSummary = ct.is_running
         ? localize('Copy trading is active and listening for new trades.')
@@ -193,7 +190,7 @@ const CopyTrading = observer(() => {
                             <button
                                 className='ct2__start-btn ct2__start-btn--demo-real'
                                 onClick={() => void ct.startCopying()}
-                                disabled={!canStartDemoToReal}
+                                disabled={!canStartButtons}
                                 title={localize('Copy trades from the logged-in demo account to real destinations')}
                             >
                                 <IconPlay /> {localize('Start Demo → Real')}
@@ -201,7 +198,7 @@ const CopyTrading = observer(() => {
                             <button
                                 className='ct2__start-btn ct2__start-btn--api'
                                 onClick={() => void ct.startCopying()}
-                                disabled={!canActivateApiTrades}
+                                disabled={!canStartButtons}
                                 title={localize('Activate copying to the destination API token')}
                             >
                                 <IconPlay /> {localize('Activate API Trades')}
@@ -232,7 +229,7 @@ const CopyTrading = observer(() => {
                                 <strong>{sourceAccount.loginid}</strong>
                                 <small>{sourceAccount.is_virtual ? localize('Demo / DOT source') : localize('Real / ROT source')}</small>
                                 <small className='ct2__source-balance'>
-                                    {localize('Available balance')}: {fmtBalance(sourceAccount.balance, sourceAccount.currency)}
+                                    {localize('Available balance')}: {fmtBalance(parseFloat(store.client.balance) || 0, store.client.currency)}
                                 </small>
                             </span>
                         </div>

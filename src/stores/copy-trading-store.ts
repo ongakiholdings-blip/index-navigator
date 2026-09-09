@@ -407,10 +407,18 @@ export default class CopyTradingStore {
 
     startCopying = async () => {
         if (this.is_running) return;
-        if (this.leader_status !== 'connected') return;
+        if (this.leader_status !== 'connected') {
+            this.leader_error = 'Connect the logged-in source account before starting';
+            return;
+        }
 
         if (this.followers.filter(f => f.status === 'connected').length === 0 && this.followerApiInstance && this.followerAccountInfo) {
             await this.connectFollowerFromApi(this.followerApiInstance, this.followerAccountInfo);
+        }
+
+        if (this.followers.filter(f => f.status === 'connected').length === 0) {
+            this.leader_error = 'Add and connect a destination API token before starting';
+            return;
         }
 
         if (this.service) {
