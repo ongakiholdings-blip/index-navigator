@@ -6,6 +6,64 @@
     color: #172033;
 }
 
+/* Deriv-Homes glass-water treatment, scoped to Tutorials. */
+.tutorials-page {
+    background:
+        radial-gradient(circle at 14% 12%, rgb(255 255 255 / 65%), transparent 18%),
+        radial-gradient(circle at 82% 86%, rgb(49 212 205 / 38%), transparent 28%),
+        linear-gradient(135deg, #bdeff1 0%, #77d9df 42%, #217fb5 100%);
+    color: #061c3d;
+
+    &__sidebar {
+        background: rgb(255 255 255 / 28%);
+        border-right: 1px solid rgb(255 255 255 / 55%);
+        backdrop-filter: blur(18px);
+    }
+
+    &__search {
+        background: rgb(255 255 255 / 45%);
+        border-color: rgb(255 255 255 / 72%);
+        color: #075b82;
+
+        input {
+            background: transparent;
+            color: #061c3d;
+        }
+    }
+
+    &__nav-item {
+        color: #164d70;
+
+        &--active {
+            background: rgb(255 255 255 / 48%);
+            color: #061c3d;
+            box-shadow: inset 0 1px rgb(255 255 255 / 70%);
+        }
+    }
+
+    &__content {
+        background: transparent;
+    }
+}
+
+.tutorials-wrap {
+    color: #061c3d;
+
+    &__group__title,
+    &__placeholder__description {
+        color: #061c3d;
+    }
+
+    &__cards {
+        background: linear-gradient(145deg, rgb(255 255 255 / 58%), rgb(255 255 255 / 18%));
+        border: 1px solid rgb(255 255 255 / 72%);
+        border-radius: 1rem;
+        box-shadow: 0 1rem 2.4rem rgb(5 53 91 / 16%), inset 0 1px rgb(255 255 255 / 72%);
+        padding: 0.7rem;
+        backdrop-filter: blur(18px);
+    }
+}
+
 .tutorials-page__sidebar {
     flex: 0 0 11.5rem;
     padding: 1.2rem 0.7rem;
@@ -228,5 +286,35 @@
 
     .tutorials-wrap__group__cards {
         flex-basis: 8.2rem;
+    }
+}
+
+/* Keep the glass-water treatment above the legacy layout and mobile rules. */
+.tutorials-page {
+    background:
+        radial-gradient(circle at 14% 12%, rgb(255 255 255 / 65%), transparent 18%),
+        radial-gradient(circle at 82% 86%, rgb(49 212 205 / 38%), transparent 28%),
+        linear-gradient(135deg, #bdeff1 0%, #77d9df 42%, #217fb5 100%) !important;
+    color: #061c3d;
+}
+
+.tutorials-page__sidebar {
+    background: rgb(255 255 255 / 28%) !important;
+    border-right-color: rgb(255 255 255 / 55%);
+    backdrop-filter: blur(18px);
+}
+
+.tutorials-page__search {
+    background: rgb(255 255 255 / 45%) !important;
+    border-color: rgb(255 255 255 / 72%);
+}
+
+.tutorials-page__nav-item {
+    color: #164d70;
+
+    &--active {
+        background: rgb(255 255 255 / 48%) !important;
+        color: #061c3d;
+        box-shadow: inset 0 1px rgb(255 255 255 / 70%);
     }
 }

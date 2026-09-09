@@ -806,6 +806,43 @@ body.theme--light {
     }
 }
 
+/* Deriv-Homes glass-water treatment, scoped to Copy Trading. */
+.ct2 {
+    background:
+        radial-gradient(circle at 14% 12%, rgb(255 255 255 / 65%), transparent 18%),
+        radial-gradient(circle at 82% 86%, rgb(49 212 205 / 38%), transparent 28%),
+        linear-gradient(135deg, #bdeff1 0%, #77d9df 42%, #217fb5 100%) !important;
+    color: #061c3d;
+
+    .ct2__panel,
+    .ct2__empty-state,
+    .ct2__account-list,
+    .ct2__card {
+        background: linear-gradient(145deg, rgb(255 255 255 / 58%), rgb(255 255 255 / 18%));
+        border-color: rgb(255 255 255 / 72%);
+        box-shadow:
+            0 1.2rem 2.8rem rgb(5 53 91 / 20%),
+            0 0 1.2rem rgb(49 212 205 / 20%),
+            inset 0 1px rgb(255 255 255 / 72%);
+        backdrop-filter: blur(18px);
+    }
+
+    .ct2__panel-header h1,
+    .ct2__section h2,
+    .ct2__panel-header p,
+    .ct2__multiplier-label,
+    .ct2__account-row-id,
+    .ct2__account-row-bal,
+    .ct2__account-row-status {
+        color: #061c3d;
+    }
+
+    .ct2__start-btn {
+        background: #062b56;
+        border-color: #062b56;
+    }
+}
+
 /* ════════════════════════════════════════════════
    DARK THEME
    ════════════════════════════════════════════════ */

@@ -95,6 +95,7 @@ $loss-red:     #ef4444;
             background: linear-gradient(90deg, $gold, transparent);
             opacity: 0.6;
         }
+
     }
 
     &__header-left { flex: 1; }
@@ -991,4 +992,46 @@ body.theme--dark {
 @keyframes gold-shimmer-anim {
     0%   { background-position: -200% center; }
     100% { background-position:  200% center; }
+}
+
+/* Deriv-Homes glass-water treatment, scoped to Calculator. */
+.analysis {
+    background:
+        radial-gradient(circle at 14% 12%, rgb(255 255 255 / 65%), transparent 18%),
+        radial-gradient(circle at 82% 86%, rgb(49 212 205 / 38%), transparent 28%),
+        linear-gradient(135deg, #bdeff1 0%, #77d9df 42%, #217fb5 100%) !important;
+    color: #061c3d;
+
+    &__tool,
+    &__card,
+    &__section,
+    &__strat-content {
+        background: linear-gradient(145deg, rgb(255 255 255 / 58%), rgb(255 255 255 / 18%)) !important;
+        border-color: rgb(255 255 255 / 72%) !important;
+        box-shadow:
+            0 1.2rem 2.8rem rgb(5 53 91 / 20%),
+            0 0 1.2rem rgb(49 212 205 / 20%),
+            inset 0 1px rgb(255 255 255 / 72%) !important;
+        backdrop-filter: blur(18px);
+    }
+
+    &__title,
+    &__subtitle,
+    &__tool-title,
+    &__tool-desc,
+    &__section-title,
+    &__strat-title,
+    &__strat-note,
+    &__stat-label,
+    &__history-title {
+        color: #061c3d !important;
+        -webkit-text-fill-color: #061c3d !important;
+    }
+
+    &__btn--primary,
+    &__mode-btn--active {
+        background: #062b56 !important;
+        border-color: #062b56 !important;
+        color: #fff !important;
+    }
 }

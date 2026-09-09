@@ -56,6 +56,9 @@ import './main.scss';
 
 const ChartWrapper = lazy(() => import('../chart/chart-wrapper'));
 const Tutorial = lazy(() => import('../tutorials'));
+const DERIV_AFFILIATE_URL = 'https://t.deriv.link?t=DGSGSFMT3L38';
+const CONTACT_WHATSAPP_URL = 'https://wa.me/+254115335502';
+const CONTACT_TELEGRAM_URL = 'https://t.me/index_navigator';
 
 const AppWrapper = observer(() => {
     const { connectionStatus } = useApiBase();
@@ -395,9 +398,50 @@ const AppWrapper = observer(() => {
                                 }
                                 id='id-deriv-homes'
                             >
-                                <div className='deriv-homes-placeholder'>
-                                    <h1><Localize i18n_default_text='Deriv-Homes' /></h1>
-                                    <p><Localize i18n_default_text='Your Deriv home is coming soon.' /></p>
+                                <div className='deriv-homes'>
+                                    <div className='deriv-homes__water water-orb water-orb--one' />
+                                    <div className='deriv-homes__water water-orb water-orb--two' />
+                                    <div className='deriv-homes__ripple' />
+                                    <div className='deriv-homes__content'>
+                                        <span className='deriv-homes__eyebrow'>INDEXNAVIGATOR × DERIV</span>
+                                        <h1>Build your next move with Deriv</h1>
+                                        <p className='deriv-homes__intro'>
+                                            Become a Deriv member and earn through affiliate marketing.
+                                        </p>
+                                        <div className='deriv-homes__actions'>
+                                            <a
+                                                className='deriv-homes__primary-action'
+                                                href={DERIV_AFFILIATE_URL}
+                                                target='_blank'
+                                                rel='noreferrer'
+                                            >
+                                                <span>Become an affiliate</span>
+                                                <span aria-hidden='true'>↗</span>
+                                            </a>
+                                            <a
+                                                className='deriv-homes__secondary-action'
+                                                href={CONTACT_WHATSAPP_URL}
+                                                target='_blank'
+                                                rel='noreferrer'
+                                            >
+                                                Connect with me
+                                            </a>
+                                        </div>
+                                        <div className='deriv-homes__trust-row'>
+                                            <span><strong>01</strong> Create your account</span>
+                                            <span><strong>02</strong> Explore the markets</span>
+                                            <span><strong>03</strong> Grow with guidance</span>
+                                        </div>
+                                    </div>
+                                    <aside className='deriv-homes__glass-card'>
+                                        <span className='deriv-homes__card-icon' aria-hidden='true'>D</span>
+                                        <span className='deriv-homes__card-label'>Your Deriv gateway</span>
+                                        <strong>One clear place to begin</strong>
+                                        <p>Get connected to Deriv and stay connected to your trading community.</p>
+                                        <a href={CONTACT_TELEGRAM_URL} target='_blank' rel='noreferrer'>
+                                            Join the community <span aria-hidden='true'>→</span>
+                                        </a>
+                                    </aside>
                                 </div>
                             </div>
                             <div
@@ -595,15 +639,17 @@ const AppWrapper = observer(() => {
                 </div>
             </div>
             <DesktopWrapper>
-                <div className='main__run-strategy-wrapper'>
-                    <RunStrategy />
-                    <RunPanel />
-                </div>
+                {active_tab !== DBOT_TABS.DERIV_HOMES && (
+                    <div className='main__run-strategy-wrapper'>
+                        <RunStrategy />
+                        <RunPanel />
+                    </div>
+                )}
                 <ChartModal />
                 <TradingViewModal />
             </DesktopWrapper>
             <DCirclesModal />
-            <MobileWrapper>{!is_open && <RunPanel />}</MobileWrapper>
+            <MobileWrapper>{active_tab !== DBOT_TABS.DERIV_HOMES && !is_open && <RunPanel />}</MobileWrapper>
             <Dialog
                 cancel_button_text={cancel_button_text || localize('Cancel')}
                 className='dc-dialog__wrapper--fixed'
