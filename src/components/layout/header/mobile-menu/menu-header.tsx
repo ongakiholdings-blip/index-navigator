@@ -1,4 +1,3 @@
-// Updated to show a plain "Settings" title (matching other templates' drawer style)
 import { ComponentProps } from 'react';
 import { LabelPairedGlobeSmRegularIcon } from '@deriv/quill-icons';
 import { useTranslations } from '@deriv-com/translations';
@@ -20,9 +19,6 @@ const MenuHeader = ({ hideLanguageSetting, openLanguageSetting }: TMenuHeader) =
         <div className='mobile-menu__header'>
             <div className='mobile-menu__header__brand'>
                 <LogoMark height={28} />
-                <Text className='mobile-menu__header__title' size={isDesktop ? 'xs' : 'sm'} weight='bold'>
-                    {localize('Settings')}
-                </Text>
             </div>
             {!hideLanguageSetting && (
                 <button

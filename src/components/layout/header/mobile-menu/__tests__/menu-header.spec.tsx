@@ -23,18 +23,16 @@ describe('MenuHeader component', () => {
         });
     });
 
-    // [AI] Header shows a plain "Settings" title instead of the logo + app name mark
-    it('renders the Settings title in mobile view', () => {
+    it('does not render a Settings title in mobile view', () => {
         render(<MenuHeader hideLanguageSetting={false} openLanguageSetting={mockOpenLanguageSetting} />);
-        expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(screen.queryByText('Settings')).not.toBeInTheDocument();
     });
 
-    it('renders the Settings title in desktop view', () => {
+    it('does not render a Settings title in desktop view', () => {
         (useDevice as jest.Mock).mockReturnValue({ isDesktop: true });
         render(<MenuHeader hideLanguageSetting={false} openLanguageSetting={mockOpenLanguageSetting} />);
-        expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(screen.queryByText('Settings')).not.toBeInTheDocument();
     });
-    // [/AI]
 
     it('does not render language setting button when hideLanguageSetting is true', () => {
         render(<MenuHeader hideLanguageSetting openLanguageSetting={mockOpenLanguageSetting} />);

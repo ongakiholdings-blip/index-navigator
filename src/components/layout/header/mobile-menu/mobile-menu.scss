@@ -47,14 +47,6 @@
             }
         }
 
-        &__title {
-            color: var(--text-prominent);
-            white-space: nowrap;
-            opacity: 0.9;
-            padding-inline-start: 0.8rem;
-            border-inline-start: 1px solid var(--brand-secondary, var(--text-prominent));
-        }
-
         &__language {
             display: flex;
             align-items: center;
