@@ -248,7 +248,7 @@ const CopyTrading = observer(() => {
                     </p>
                  </section>
 
-                 {!sourceAccount?.is_virtual && <section className='ct2__section'>
+                 {!isDemoAccount(store.client.loginid) && <section className='ct2__section'>
                     <div className='ct2__section-heading'>
                         <h2>{localize('Destination API Token')}</h2>
                         <span className='ct2__leader-status'>{localize('Trades are copied here')}</span>

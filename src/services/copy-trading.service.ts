@@ -274,6 +274,14 @@ export class CopyTradingService {
         return conn.account;
     }
 
+    /** Preserve the authenticated logged-in connection as a destination before switching source. */
+    moveLeaderToFollower(loginid: string): boolean {
+        if (!this.leaderConn || this.leaderConn.account.loginid !== loginid) return false;
+        this.followerConns.set(loginid, this.leaderConn);
+        this.leaderConn = null;
+        return true;
+    }
+
     /** Disconnect and tear down the leader connection. */
     disconnectLeader() {
         this.stopCopying();

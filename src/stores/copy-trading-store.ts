@@ -439,19 +439,6 @@ export default class CopyTradingStore {
         try {
             const currentLoginid = this.leader_account?.loginid || '';
             const storedAccounts = JSON.parse(sessionStorage.getItem('deriv_accounts') || '[]') as DerivAccount[];
-            const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, unknown>;
-            const clientAccounts = JSON.parse(localStorage.getItem('clientAccounts') || '{}') as Record<string, unknown>;
-            const activeToken = localStorage.getItem('authToken') || sessionStorage.getItem('api_token_direct') || '';
-            const getStoredToken = (loginid: string | null) => {
-                if (!loginid) return '';
-                const directToken = tokenMap[loginid];
-                if (typeof directToken === 'string') return directToken;
-                const account = clientAccounts[loginid];
-                if (account && typeof account === 'object' && 'token' in account) {
-                    return String((account as { token?: unknown }).token || '');
-                }
-                return loginid === currentLoginid ? activeToken : '';
-            };
             let demoLoginid = this.leader_account?.is_virtual ? currentLoginid : null;
             let realLoginid = this.leader_account?.is_virtual ? null : currentLoginid;
 
@@ -467,21 +454,28 @@ export default class CopyTradingStore {
                 realLoginid = realLoginid || storedAccounts.find(account => account.account_type === 'real')?.account_id || null;
             }
 
-            const demoToken = getStoredToken(demoLoginid);
-            const destinationToken = getStoredToken(realLoginid);
+            const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, unknown>;
+            const demoToken = demoLoginid && typeof tokenMap[demoLoginid] === 'string' ? tokenMap[demoLoginid] : '';
 
             if (!demoToken) {
                 this.leader_error = 'The paired demo account is not available in the logged-in session';
                 return;
             }
 
-            if (destinationApi && destinationAccountInfo?.loginid && !this.followers.some(follower => follower.account?.loginid === destinationAccountInfo.loginid)) {
+            if (!destinationApi || !destinationAccountInfo?.loginid) {
+                this.leader_error = 'The logged-in real account is not available as a destination';
+                return;
+            }
+
+            if (realLoginid) {
+                this.ensureService();
+                this.service!.moveLeaderToFollower(realLoginid);
+            }
+            if (!this.followers.some(follower => follower.account?.loginid === destinationAccountInfo.loginid)) {
                 await this.connectFollowerFromApi(destinationApi, {
                     ...destinationAccountInfo,
                     is_virtual: 0,
                 });
-            } else if (destinationToken && !this.followers.some(follower => follower.token === destinationToken)) {
-                await this.addFollower(destinationToken);
             }
 
             if (!this.leader_account?.is_virtual || this.leader_account.loginid !== demoLoginid) {
