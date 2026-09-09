@@ -77,6 +77,7 @@ const DevToolsGuard: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 'J',
                 'C',
                 'U',
+                'M',
             ];
             const lowerKey = event.key.toUpperCase();
             if (

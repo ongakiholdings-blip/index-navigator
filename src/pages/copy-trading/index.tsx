@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
@@ -90,6 +90,7 @@ const fmtDate = (ts: number) =>
 const CopyTrading = observer(() => {
     const store = useStore();
     const ct = store.copy_trading;
+    const connectingLoginid = useRef('');
 
     const handleFollowerKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') ct.addFollower();
@@ -104,17 +105,34 @@ const CopyTrading = observer(() => {
             const activeIsVirtual = client?.is_virtual ?? liveAccountInfo?.is_virtual ?? (activeLoginid ? isDemoAccount(activeLoginid) : false);
 
             if (!activeLoginid || !liveApi) return;
+            if (connectingLoginid.current === activeLoginid || (ct.leader_status === 'connected' && ct.leader_account?.loginid === activeLoginid)) {
+                return;
+            }
 
+            connectingLoginid.current = activeLoginid;
             await ct.connectLeaderFromApi(liveApi, {
                 loginid: activeLoginid,
-                balance: parseFloat(String(activeBalance)) || 0,
-                currency: activeCurrency,
+                balance: parseFloat(String(liveAccountInfo.balance ?? client?.balance ?? 0)) || 0,
+                currency: liveAccountInfo.currency || client?.currency || 'USD',
                 is_virtual: activeIsVirtual ? 1 : 0,
             });
         } catch (e) {
             console.error('Unable to connect the logged-in source account:', e);
+        } finally {
+            connectingLoginid.current = '';
         }
     };
+
+    useEffect(() => {
+        void handleConnectLeader();
+        const retryTimer = window.setInterval(() => {
+            if (ct.leader_status !== 'connected' && !ct.is_running) {
+                void handleConnectLeader();
+            }
+        }, 1000);
+
+        return () => window.clearInterval(retryTimer);
+    }, [ct, store.client]);
 
     const connectedFollowers = ct.followers.filter(f => f.status === 'connected');
     const sourceAccount = ct.leader_account;
@@ -126,7 +144,7 @@ const CopyTrading = observer(() => {
         : ct.leader_status === 'connected' && hasActiveFollower
             ? localize('Leader and follower accounts are connected. Press Start to begin copying.')
             : ct.leader_status === 'connected'
-                ? localize('Leader account connected. Waiting for a follower account to become active.')
+            ? localize('Logged-in account is ready. Press Start when the destination account is connected.')
                 : ct.leader_status === 'connecting'
                     ? localize('Connecting your account for copy trading…')
                     : localize('Not connected yet. Connect your account to begin.');
@@ -156,9 +174,9 @@ const CopyTrading = observer(() => {
                     <div>
                         <div className='ct2__title-row'>
                             <h1>{localize('Copy Trading')}</h1>
-                            <span className={`ct2__status ct2__status--${ct.is_running ? 'active' : 'offline'}`}>
+                            <span className={`ct2__status ct2__status--${ct.is_running || ct.leader_status === 'connected' ? 'active' : 'offline'}`}>
                                 <span />
-                                {ct.is_running ? localize('Active') : localize('Offline')}
+                                {ct.is_running ? localize('Active') : ct.leader_status === 'connected' ? localize('Ready') : localize('Offline')}
                             </span>
                         </div>
                         <p>{localize('Replicate trades from your logged-in account to a destination account.')}</p>
