@@ -231,11 +231,18 @@ export class CopyTradingService {
         if (!api_instance) throw new Error('API instance not provided');
         if (this.leaderConn) this.disconnectLeader();
 
+        const liveBalance = typeof (api_instance as any).balance === 'function'
+            ? await (api_instance as any).balance()
+            : null;
+        if (liveBalance?.error) {
+            throw new Error(liveBalance.error.message || 'Unable to read source account balance');
+        }
+        const balanceData = liveBalance?.balance;
         const account: CopyAccount = {
             token: account_info?.loginid ?? '',
             loginid: account_info?.loginid ?? '',
-            balance: account_info?.balance ?? 0,
-            currency: account_info?.currency ?? 'USD',
+            balance: Number(balanceData?.balance ?? account_info?.balance ?? 0),
+            currency: balanceData?.currency ?? account_info?.currency ?? 'USD',
             is_virtual: !!account_info?.is_virtual,
         };
 

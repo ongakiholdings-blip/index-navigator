@@ -140,7 +140,7 @@ const CopyTrading = observer(() => {
     const canStart = ct.leader_status === 'connected' && !ct.is_running && hasActiveFollower;
     const hasOnlyRealDestinations = connectedFollowers.every(follower => !follower.account?.is_virtual);
     const canStartDemoToReal = canStart && !!sourceAccount?.is_virtual && hasOnlyRealDestinations;
-    const canActivateApiTrades = canStart && sourceAccount?.is_virtual === false;
+    const canActivateApiTrades = canStart;
     const canStop = ct.is_running;
     const connectionSummary = ct.is_running
         ? localize('Copy trading is active and listening for new trades.')
@@ -231,6 +231,9 @@ const CopyTrading = observer(() => {
                             <span>
                                 <strong>{sourceAccount.loginid}</strong>
                                 <small>{sourceAccount.is_virtual ? localize('Demo / DOT source') : localize('Real / ROT source')}</small>
+                                <small className='ct2__source-balance'>
+                                    {localize('Available balance')}: {fmtBalance(sourceAccount.balance, sourceAccount.currency)}
+                                </small>
                             </span>
                         </div>
                     ) : (
