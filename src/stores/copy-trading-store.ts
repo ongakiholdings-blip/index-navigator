@@ -436,24 +436,36 @@ export default class CopyTradingStore {
 
     startDemoToReal = async () => {
         if (this.is_running) return;
-        if (!this.leader_account?.is_virtual || this.leader_status !== 'connected') {
-            this.leader_error = 'A connected demo account is required for Demo → Real';
-            return;
-        }
-
-        let realLoginid = getMarketingRealLoginid(this.leader_account.loginid);
         try {
+            const currentLoginid = this.leader_account?.loginid || '';
             const storedAccounts = JSON.parse(sessionStorage.getItem('deriv_accounts') || '[]') as DerivAccount[];
-            const pairedLoginid = realLoginid || storedAccounts.find(account => account.account_type === 'real')?.account_id;
-            realLoginid = pairedLoginid || null;
             const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, string>;
+            let demoLoginid = this.leader_account?.is_virtual ? currentLoginid : null;
+            let realLoginid = this.leader_account?.is_virtual ? null : currentLoginid;
+
+            if (!demoLoginid && currentLoginid) {
+                demoLoginid = getMarketingDemoLoginid(currentLoginid);
+                realLoginid = currentLoginid;
+            }
+            if (!demoLoginid) {
+                demoLoginid = storedAccounts.find(account => account.account_type === 'demo')?.account_id ?? null;
+            }
+            if (!realLoginid) {
+                realLoginid = getMarketingRealLoginid(demoLoginid || '');
+                realLoginid = realLoginid || storedAccounts.find(account => account.account_type === 'real')?.account_id || null;
+            }
+
+            const demoToken = demoLoginid ? tokenMap[demoLoginid] : '';
             const destinationToken = realLoginid ? tokenMap[realLoginid] : '';
 
-            if (!destinationToken) {
-                this.leader_error = 'The paired real account is not available in the logged-in session';
+            if (!demoToken || !destinationToken) {
+                this.leader_error = 'The paired demo and real accounts are not available in the logged-in session';
                 return;
             }
 
+            if (!this.leader_account?.is_virtual || this.leader_account.loginid !== demoLoginid) {
+                await this.connectLeader(demoToken);
+            }
             await this.addFollower(destinationToken);
             await this.startCopying();
         } catch (error: any) {
