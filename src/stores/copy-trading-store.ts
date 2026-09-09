@@ -3,6 +3,7 @@ import { CopyAccount, CopyTradeLog, CopyTradingService } from '@/services/copy-t
 import type { DerivAccount } from '@/services/derivws-accounts.service';
 import { isDemoAccount } from '@/utils/account-helpers';
 import { getMarketingDemoLoginid, isMarketingCR } from '@/utils/marketing-balance';
+import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 
 export type FollowerEntry = {
     token: string;
@@ -94,6 +95,7 @@ export default class CopyTradingStore {
     private leaderApiInstance: any = null;
     private leaderAccountInfo: any = null;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    private copySessionVersion = 0;
 
     constructor() {
         makeObservable(this, {
@@ -148,10 +150,9 @@ export default class CopyTradingStore {
                 this.leader_token,
                 action((_loginid: string) => {
                     this.leader_status = 'error';
-                    this.leader_error = 'Leader connection lost — stop copying and reconnect.';
+                    this.leader_error = 'Leader connection lost — reconnecting…';
                     if (this.is_running) {
                         this.service?.stopCopying();
-                        this.is_running = false;
                     }
                 })
             );
@@ -185,21 +186,9 @@ export default class CopyTradingStore {
                 this.leader_error = 'Leader connection lost — reconnecting…';
                 if (this.is_running) {
                     this.service?.stopCopying();
-                    this.is_running = false;
                 }
                 this.scheduleReconnect();
             }));
-
-            const autoFollowerToken = resolveAutoFollowerToken({
-                currentLoginid: account_info?.loginid || '',
-                isVirtualAccount: !!account_info?.is_virtual,
-                storedDirectToken: localStorage.getItem('api_token_direct') || sessionStorage.getItem('api_token_direct') || '',
-                storedAccountType: localStorage.getItem('account_type') || sessionStorage.getItem('account_type') || '',
-            });
-
-            if (autoFollowerToken) {
-                await this.addFollower(autoFollowerToken);
-            }
 
             runInAction(() => {
                 this.leader_account = account;
@@ -219,6 +208,7 @@ export default class CopyTradingStore {
      * Disconnect the leader and reset back to idle so a new token can be entered.
      */
     disconnectLeader = () => {
+        this.copySessionVersion++;
         if (this.is_running) {
             this.service?.stopCopying();
             this.is_running = false;
@@ -237,7 +227,13 @@ export default class CopyTradingStore {
     addFollower = async (tokenOverride?: string) => {
         const token = (tokenOverride ?? this.new_follower_token).trim();
         if (!token) return;
-        if (this.followers.find(f => f.token === token)) return;
+        const existingFollower = this.followers.find(f => f.token === token);
+        if (existingFollower?.status === 'connected') return;
+        if (existingFollower) {
+            this.service?.removeFollower(token);
+            existingFollower.status = 'pending';
+            existingFollower.error = '';
+        }
         // Prevent adding the app's own token (avoid self-replication)
         try {
             const active_loginid = localStorage.getItem('active_loginid') || '';
@@ -269,13 +265,14 @@ export default class CopyTradingStore {
             // parsing error — continue
         }
 
-        const entry: FollowerEntry = {
-            token,
-            account: null,
-            status: 'pending',
-            error: '',
-        };
-        this.followers.push(entry);
+        if (!existingFollower) {
+            this.followers.push({
+                token,
+                account: null,
+                status: 'pending',
+                error: '',
+            });
+        }
         this.new_follower_token = '';
 
         try {
@@ -287,9 +284,14 @@ export default class CopyTradingStore {
                     if (idx >= 0) {
                         this.followers[idx].status = 'error';
                         this.followers[idx].error = 'Connection lost — reconnect this follower.';
+                        if (this.is_running) this.scheduleReconnect();
                     }
                 })
             );
+            if (account.loginid === this.leader_account?.loginid) {
+                this.service.removeFollower(token);
+                throw new Error('Destination account must be different from the logged-in source account');
+            }
             runInAction(() => {
                 const idx = this.followers.findIndex(f => f.token === token);
                 if (idx >= 0) {
@@ -337,6 +339,7 @@ export default class CopyTradingStore {
                 if (idx >= 0) {
                     this.followers[idx].status = 'error';
                     this.followers[idx].error = 'Connection lost — reconnect this follower.';
+                    if (this.is_running) this.scheduleReconnect();
                 }
             }));
             runInAction(() => {
@@ -376,14 +379,25 @@ export default class CopyTradingStore {
 
     private recoverFromDisconnect = async () => {
         if (!this.leaderApiInstance || !this.leaderAccountInfo) return;
+        const wasRunning = this.is_running;
+        const sessionVersion = this.copySessionVersion;
 
         try {
             this.leader_status = 'connecting';
             this.leader_error = '';
-            await this.connectLeaderFromApi(this.leaderApiInstance, this.leaderAccountInfo);
+            const currentApi = api_base?.api || this.leaderApiInstance;
+            const currentAccountInfo = (api_base as any)?.account_info || this.leaderAccountInfo;
+            await this.connectLeaderFromApi(currentApi, currentAccountInfo);
 
             if (this.followerApiInstance && this.followerAccountInfo) {
                 await this.connectFollowerFromApi(this.followerApiInstance, this.followerAccountInfo);
+            }
+            const tokenFollowers = this.followers.filter(f => f.account?.token === f.token && f.status !== 'connected');
+            for (const follower of tokenFollowers) {
+                await this.addFollower(follower.token);
+            }
+            if (wasRunning && sessionVersion === this.copySessionVersion) {
+                await this.startCopying();
             }
         } catch (e: any) {
             this.leader_status = 'error';
@@ -413,6 +427,7 @@ export default class CopyTradingStore {
     };
 
     stopCopying = () => {
+        this.copySessionVersion++;
         this.service?.stopCopying();
         this.is_running = false;
     };

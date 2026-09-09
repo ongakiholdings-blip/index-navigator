@@ -5,8 +5,8 @@
  * listens to the leader's `transaction` stream, and replicates every `buy`
  * event on all connected follower accounts.
  *
- * Also supports demo → real copying: just set the leader token to a demo
- * account API token and add real-account tokens as followers.
+ * Also supports demo → real copying: attach the logged-in demo session as
+ * the leader and add only the destination real-account token as a follower.
  */
 import DerivAPIBasic from '@deriv/deriv-api/dist/DerivAPIBasic';
 
@@ -92,6 +92,11 @@ async function createConnection(
                     return;
                 }
                 const auth = res?.authorize;
+                if (Array.isArray(auth?.scopes) && !auth.scopes.includes('trade')) {
+                    ws.close();
+                    reject(new Error('This API token does not have trading permission'));
+                    return;
+                }
                 const account: CopyAccount = {
                     token,
                     loginid: auth?.loginid ?? '',

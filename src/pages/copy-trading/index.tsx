@@ -3,10 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { localize } from '@deriv-com/translations';
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
-import { DerivWSAccountsService } from '@/services/derivws-accounts.service';
-import { resolvePairedAccountInfo } from '@/stores/copy-trading-store';
 import { isDemoAccount } from '@/utils/account-helpers';
-import { getAutoDetectedCopyTradingLeader } from '@/utils/marketing-balance';
 import './copy-trading.scss';
 
 // ── icons ────────────────────────────────────────────────────────────────────
@@ -104,49 +101,24 @@ const CopyTrading = observer(() => {
             const liveApi = api_base?.api || undefined;
             const liveAccountInfo = (api_base as any)?.account_info || {};
             const activeLoginid = client?.loginid || liveAccountInfo?.loginid || api_base?.account_id || '';
-            const activeBalance = client?.balance ?? liveAccountInfo?.balance ?? 0;
-            const activeCurrency = client?.currency ?? liveAccountInfo?.currency ?? 'USD';
             const activeIsVirtual = client?.is_virtual ?? liveAccountInfo?.is_virtual ?? (activeLoginid ? isDemoAccount(activeLoginid) : false);
-            const detectedLeaderLoginid = getAutoDetectedCopyTradingLeader(activeLoginid, !!activeIsVirtual);
 
-            if (!activeLoginid || !detectedLeaderLoginid || !liveApi) return;
+            if (!activeLoginid || !liveApi) return;
 
             await ct.connectLeaderFromApi(liveApi, {
-                loginid: detectedLeaderLoginid,
+                loginid: activeLoginid,
                 balance: parseFloat(String(activeBalance)) || 0,
                 currency: activeCurrency,
                 is_virtual: activeIsVirtual ? 1 : 0,
             });
-
-            if (activeLoginid !== detectedLeaderLoginid) {
-                await ct.connectFollowerFromApi(liveApi, {
-                    loginid: activeLoginid,
-                    balance: parseFloat(String(activeBalance)) || 0,
-                    currency: activeCurrency,
-                    is_virtual: activeIsVirtual ? 1 : 0,
-                });
-            }
         } catch (e) {
-            // ignore auto-detect failures
+            console.error('Unable to connect the logged-in source account:', e);
         }
     };
 
-    const client = store.client;
-    const liveAccountInfo = (api_base as any)?.account_info || {};
-    const activeLoginid = client?.loginid || liveAccountInfo?.loginid || api_base?.account_id || '';
-    const activeBalance = client?.balance ?? liveAccountInfo?.balance ?? 0;
-    const activeCurrency = client?.currency ?? liveAccountInfo?.currency ?? 'USD';
-    const activeIsVirtual = client?.is_virtual ?? liveAccountInfo?.is_virtual ?? (activeLoginid ? isDemoAccount(activeLoginid) : false);
-    const storedAccounts = DerivWSAccountsService.getStoredAccounts();
-    const pairedAccount = resolvePairedAccountInfo({
-        currentLoginid: activeLoginid,
-        isVirtualAccount: !!activeIsVirtual,
-        accounts: storedAccounts,
-    });
     const connectedFollowers = ct.followers.filter(f => f.status === 'connected');
-    const connectedFollowerAccount = connectedFollowers.find(f => f.account)?.account ?? null;
-    const displayAccount = connectedFollowerAccount ?? pairedAccount ?? ct.leader_account;
-    const hasActiveFollower = connectedFollowers.length > 0 || !!ct.leader_account;
+    const sourceAccount = ct.leader_account;
+    const hasActiveFollower = connectedFollowers.length > 0;
     const canStart = ct.leader_status === 'connected' && !ct.is_running && hasActiveFollower;
     const canStop = ct.is_running;
     const connectionSummary = ct.is_running
@@ -189,7 +161,7 @@ const CopyTrading = observer(() => {
                                 {ct.is_running ? localize('Active') : localize('Offline')}
                             </span>
                         </div>
-                        <p>{localize('Copy trades from this account to your connected client accounts.')}</p>
+                        <p>{localize('Replicate trades from your logged-in account to a destination account.')}</p>
                     </div>
                     {canStop ? (
                         <button className='ct2__start-btn ct2__start-btn--stop' onClick={() => ct.stopCopying()}>
@@ -204,25 +176,46 @@ const CopyTrading = observer(() => {
 
                 <section className='ct2__section'>
                     <div className='ct2__section-heading'>
-                        <h2>{localize('Client API Token')}</h2>
+                        <h2>{localize('Logged-in source account')}</h2>
                         {ct.leader_status === 'connected' ? (
-                            <span className='ct2__leader-status'>{localize('Source account connected')}</span>
+                            <span className='ct2__leader-status'>{localize('Source connected')}</span>
                         ) : (
                             <button
                                 className='ct2__connect-btn'
                                 onClick={handleConnectLeader}
                                 disabled={ct.leader_status === 'connecting' || ct.is_running}
                             >
-                                {ct.leader_status === 'connecting' ? localize('Connecting…') : localize('Connect source account')}
+                                {ct.leader_status === 'connecting' ? localize('Connecting…') : localize('Use logged-in account')}
                             </button>
                         )}
+                    </div>
+                    {sourceAccount ? (
+                        <div className='ct2__source-account'>
+                            <IconDemoReal />
+                            <span>
+                                <strong>{sourceAccount.loginid}</strong>
+                                <small>{sourceAccount.is_virtual ? localize('Demo / DOT source') : localize('Real / ROT source')}</small>
+                            </span>
+                        </div>
+                    ) : (
+                        <div className='ct2__empty-state'>{localize('Connect the logged-in account to use it as the source.')}</div>
+                    )}
+                    <p className='ct2__token-help'>
+                        {localize('The logged-in account is the source. Enter only the destination account token; no source token is required.')}
+                    </p>
+                 </section>
+
+                 <section className='ct2__section'>
+                    <div className='ct2__section-heading'>
+                        <h2>{localize('Destination API Token')}</h2>
+                        <span className='ct2__leader-status'>{localize('Trades are copied here')}</span>
                     </div>
                     <div className='ct2__token-row'>
                         <div className='ct2__token-input-wrap'>
                             <input
                                 className='ct2__token-input'
                                 type='text'
-                                placeholder={localize('Paste a token with trading permission')}
+                                placeholder={localize('Paste destination token with trading permission')}
                                 value={ct.new_follower_token}
                                 onChange={e => ct.setNewFollowerToken(e.target.value)}
                                 onKeyDown={handleFollowerKeyDown}

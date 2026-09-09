@@ -814,6 +814,33 @@ body.theme--light {
         linear-gradient(135deg, #bdeff1 0%, #77d9df 42%, #217fb5 100%) !important;
     color: #061c3d;
 
+    .ct2__source-account {
+        align-items: center;
+        display: flex;
+        gap: 0.8rem;
+        margin-top: 1.2rem;
+        padding: 0.9rem 1.1rem;
+        border: 1px solid rgb(255 255 255 / 72%);
+        border-radius: 0.7rem;
+        background: rgb(255 255 255 / 35%);
+
+        span {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        strong { color: #061c3d; }
+        small { color: #164d70; }
+    }
+
+    .ct2__token-help {
+        color: #164d70;
+        font-size: 1.1rem;
+        line-height: 1.5;
+        margin: 1rem 0 0;
+    }
+
     .ct2__panel,
     .ct2__empty-state,
     .ct2__account-list,
