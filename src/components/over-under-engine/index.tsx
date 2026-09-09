@@ -1064,7 +1064,7 @@ const OverUnderEngine: React.FC = observer(() => {
                             className='oue__strategy-card'
                             onClick={() => selectStrategy('dual')}
                         >
-                            <span className='oue__strategy-card-badge' style={{ background: 'linear-gradient(135deg, #20d4d4, #d6b35a)' }}>↕</span>
+                            <span className='oue__strategy-card-badge'>↕</span>
                             <span className='oue__strategy-card-content'>
                                 <span className='oue__strategy-card-title'>Dual Over / Under</span>
                                 <span className='oue__strategy-card-meta'>OVER 5 + UNDER 4 · BALANCED</span>
@@ -1083,7 +1083,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                     style={{ '--strategy-color': definition.badgeColor } as React.CSSProperties}
                                     onClick={() => selectStrategy(id)}
                                 >
-                                    <span className='oue__strategy-card-badge' style={{ background: definition.badgeColor }}>{definition.badge}</span>
+                                    <span className='oue__strategy-card-badge'>{definition.badge}</span>
                                     <span className='oue__strategy-card-content'>
                                         <span className='oue__strategy-card-title'>{definition.label}</span>
                                         <span className='oue__strategy-card-meta'>
