@@ -440,7 +440,9 @@ export class CopyTradingService {
             results: [],
         };
 
-        const copyPromises = Array.from(this.followerConns.entries()).map(async ([token, conn]) => {
+        const copyPromises = Array.from(this.followerConns.entries())
+            .filter(([, conn]) => conn.ws.readyState === WebSocket.OPEN)
+            .map(async ([token, conn]) => {
             const result: CopyTradeResult = {
                 follower_loginid: conn.account.loginid,
                 // Keep only a safe hint — never the full token
@@ -463,11 +465,15 @@ export class CopyTradingService {
                 result.buy_price = fBp;
             } catch (e: any) {
                 result.error = e?.message ?? 'Unknown error';
+                this.onError(`Trade ${contract_id} was not copied to ${conn.account.loginid}: ${result.error}`);
             }
             return result;
-        });
+            });
 
         tradeLog.results = await Promise.all(copyPromises);
+        if (tradeLog.results.length === 0) {
+            this.onError(`Trade ${contract_id} could not be copied because no destination account is connected`);
+        }
         this.onTrade(tradeLog);
     }
 }

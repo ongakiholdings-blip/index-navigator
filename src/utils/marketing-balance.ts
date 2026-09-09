@@ -93,6 +93,12 @@ export function getMarketingDemoLoginid(crLoginid: string): string | null {
     return MARKETING_ACCOUNTS[crLoginid]?.demoLoginid ?? null;
 }
 
+/** Returns the configured real account paired with a demo loginid. */
+export function getMarketingRealLoginid(demoLoginid: string): string | null {
+    const entry = Object.entries(MARKETING_ACCOUNTS).find(([, config]) => config.demoLoginid === demoLoginid);
+    return entry?.[0] ?? null;
+}
+
 /**
  * Auto-detect which account should act as the copy-trading leader for the
  * currently logged-in session. For demo accounts this is the current account;

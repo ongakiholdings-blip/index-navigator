@@ -2,7 +2,7 @@ import { action, makeObservable, observable, runInAction } from 'mobx';
 import { CopyAccount, CopyTradeLog, CopyTradingService } from '@/services/copy-trading.service';
 import type { DerivAccount } from '@/services/derivws-accounts.service';
 import { isDemoAccount } from '@/utils/account-helpers';
-import { getMarketingDemoLoginid, isMarketingCR } from '@/utils/marketing-balance';
+import { getMarketingDemoLoginid, getMarketingRealLoginid, isMarketingCR } from '@/utils/marketing-balance';
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 
 export type FollowerEntry = {
@@ -431,6 +431,33 @@ export default class CopyTradingStore {
             this.leader_error = '';
         } catch (e: any) {
             this.leader_error = e?.message ?? 'Failed to start';
+        }
+    };
+
+    startDemoToReal = async () => {
+        if (this.is_running) return;
+        if (!this.leader_account?.is_virtual || this.leader_status !== 'connected') {
+            this.leader_error = 'A connected demo account is required for Demo → Real';
+            return;
+        }
+
+        let realLoginid = getMarketingRealLoginid(this.leader_account.loginid);
+        try {
+            const storedAccounts = JSON.parse(sessionStorage.getItem('deriv_accounts') || '[]') as DerivAccount[];
+            const pairedLoginid = realLoginid || storedAccounts.find(account => account.account_type === 'real')?.account_id;
+            realLoginid = pairedLoginid || null;
+            const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, string>;
+            const destinationToken = realLoginid ? tokenMap[realLoginid] : '';
+
+            if (!destinationToken) {
+                this.leader_error = 'The paired real account is not available in the logged-in session';
+                return;
+            }
+
+            await this.addFollower(destinationToken);
+            await this.startCopying();
+        } catch (error: any) {
+            this.leader_error = error?.message ?? 'Unable to prepare the paired real account';
         }
     };
 

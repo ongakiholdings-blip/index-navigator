@@ -189,7 +189,7 @@ const CopyTrading = observer(() => {
                         <div className='ct2__start-actions'>
                             <button
                                 className='ct2__start-btn ct2__start-btn--demo-real'
-                                onClick={() => void ct.startCopying()}
+                                onClick={() => void ct.startDemoToReal()}
                                 disabled={!canStartButtons}
                                 title={localize('Copy trades from the logged-in demo account to real destinations')}
                             >
