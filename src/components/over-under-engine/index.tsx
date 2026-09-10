@@ -818,7 +818,7 @@ const OverUnderEngine: React.FC = observer(() => {
                         } else {
                             setLastSkipReason(
                                 eng.current.strategyId === 'over1'
-                                    ? `Waiting for Over 1 entry sequence: 3 digits from 0–2, then 3–7 — got ${d}`
+                                    ? `Waiting for Over 1 cluster: lower digits {0,1,2} appear 3 or fewer times in the last 10 digits — got ${d}`
                                     : eng.current.strategyId === 'over2'
                                         ? `Waiting for Over 2 entry sequence: 0, 1, or 2 → 3, 4, 5, or 6 — got ${d}`
                                         : eng.current.strategyId === 'under8'
@@ -982,7 +982,7 @@ const OverUnderEngine: React.FC = observer(() => {
         setIsWaitingEntry(false);
         const statusStart = resolvedStrategy
             ? (strategyId === 'over1'
-                ? '👀 Watching for Over 1 sequence: 0–2, 0–2, 0–2, then 3–7…'
+                ? '👀 Watching for Over 1 cluster: lower digits {0,1,2} appear 3 or fewer times in the last 10 digits…'
                 : strategyId === 'over2'
                     ? '👀 Watching for Over 2 sequence: 0, 1, or 2 → 3, 4, 5, or 6…'
                     : strategyId === 'under8'
@@ -1229,7 +1229,7 @@ const OverUnderEngine: React.FC = observer(() => {
                         <span className='oue__entry-badge'>
                             {isSingleStrategyMode
                                 ? strategyId === 'over1'
-                                    ? <>Entry: <strong>0–2, 0–2, 0–2 → 3–7</strong></>
+                                    ? <>Entry: <strong>lower 0, 1, 2 count ≤ 3 in last 10 digits</strong></>
                                     : strategyId === 'over2'
                                         ? <>Entry: <strong>0/1/2 → 3–6</strong></>
                                         : strategyId === 'under8'
@@ -1370,7 +1370,7 @@ const OverUnderEngine: React.FC = observer(() => {
                         <span className='oue__entry-waiting-dot' />
                         {isSingleStrategyMode
                             ? strategyId === 'over1'
-                                ? <>Watching for the sequence <strong>0–2, 0–2, 0–2 → 3–7</strong> before the next Over 1 trade…</>
+                                ? <>Watching for <strong>lower 0, 1, 2 count ≤ 3 in the last 10 digits</strong> before the next Over 1 trade…</>
                                 : strategyId === 'over2'
                                     ? <>Watching for the sequence <strong>0/1/2 → 3, 4, 5, or 6</strong> before the next Over 2 trade…</>
                                     : strategyId === 'under8'
@@ -1639,53 +1639,74 @@ const OverUnderEngine: React.FC = observer(() => {
                     </label>
                 )}
 
-                {/* entry mode toggle */}
-                <label className='oue__entry-toggle'>
-                    <span className='oue__entry-toggle-label'>
-                        Entry point mode
-                    </span>
-                    <div
-                        className={`oue__toggle${entryMode ? ' oue__toggle--on' : ''}`}
-                        onClick={() => !isRunning && setEntryMode(v => !v)}
-                        role='switch'
-                        aria-checked={entryMode}
-                        aria-disabled={isRunning}
-                        tabIndex={0}
-                        onKeyDown={e => { if (!isRunning && (e.key === ' ' || e.key === 'Enter')) setEntryMode(v => !v); }}
-                    >
-                        <div className='oue__toggle-thumb' />
-                    </div>
-                </label>
+                {strategyId === 'over1' && (
+                    <label className='oue__entry-toggle'>
+                        <span className='oue__entry-toggle-label'>Entry point mode</span>
+                        <div
+                            className={`oue__toggle${entryMode ? ' oue__toggle--on' : ''}`}
+                            onClick={() => !isRunning && setEntryMode(v => !v)}
+                            role='switch'
+                            aria-checked={entryMode}
+                            aria-disabled={isRunning}
+                            tabIndex={0}
+                            onKeyDown={e => { if (!isRunning && (e.key === ' ' || e.key === 'Enter')) setEntryMode(v => !v); }}
+                        >
+                            <div className='oue__toggle-thumb' />
+                        </div>
+                    </label>
+                )}
 
-                {entryMode && (
-                    <div className='oue__entry-mode-options' aria-label='Entry point mode selection'>
-                        <button
-                            type='button'
-                            className={`oue__entry-mode-option${strategyId === 'dual' ? ' oue__entry-mode-option--active' : ''}`}
-                            onClick={() => {
-                                if (isRunning) return;
-                                setStrategyId('dual');
-                                setEntryMode(true);
-                            }}
-                            disabled={isRunning}
-                        >
-                            <span className='oue__entry-mode-option-title'>Dual Over/Under</span>
-                            <span className='oue__entry-mode-option-meta'>4/5 entry guard</span>
-                        </button>
-                        <button
-                            type='button'
-                            className={`oue__entry-mode-option${strategyId === 'confidence' ? ' oue__entry-mode-option--active' : ''}`}
-                            onClick={() => {
-                                if (isRunning) return;
-                                setStrategyId('confidence');
-                                setEntryMode(true);
-                            }}
-                            disabled={isRunning}
-                        >
-                            <span className='oue__entry-mode-option-title'>Confidence Gate</span>
-                            <span className='oue__entry-mode-option-meta'>Clean-digit threshold</span>
-                        </button>
-                    </div>
+                {(strategyId === 'dual' || strategyId === 'confidence') && (
+                    <>
+                        {/* entry mode toggle */}
+                        <label className='oue__entry-toggle'>
+                            <span className='oue__entry-toggle-label'>
+                                Entry point mode
+                            </span>
+                            <div
+                                className={`oue__toggle${entryMode ? ' oue__toggle--on' : ''}`}
+                                onClick={() => !isRunning && setEntryMode(v => !v)}
+                                role='switch'
+                                aria-checked={entryMode}
+                                aria-disabled={isRunning}
+                                tabIndex={0}
+                                onKeyDown={e => { if (!isRunning && (e.key === ' ' || e.key === 'Enter')) setEntryMode(v => !v); }}
+                            >
+                                <div className='oue__toggle-thumb' />
+                            </div>
+                        </label>
+
+                        {entryMode && (
+                            <div className='oue__entry-mode-options' aria-label='Entry point mode selection'>
+                                <button
+                                    type='button'
+                                    className={`oue__entry-mode-option${strategyId === 'dual' ? ' oue__entry-mode-option--active' : ''}`}
+                                    onClick={() => {
+                                        if (isRunning) return;
+                                        setStrategyId('dual');
+                                        setEntryMode(true);
+                                    }}
+                                    disabled={isRunning}
+                                >
+                                    <span className='oue__entry-mode-option-title'>Dual Over/Under</span>
+                                    <span className='oue__entry-mode-option-meta'>4/5 entry guard</span>
+                                </button>
+                                <button
+                                    type='button'
+                                    className={`oue__entry-mode-option${strategyId === 'confidence' ? ' oue__entry-mode-option--active' : ''}`}
+                                    onClick={() => {
+                                        if (isRunning) return;
+                                        setStrategyId('confidence');
+                                        setEntryMode(true);
+                                    }}
+                                    disabled={isRunning}
+                                >
+                                    <span className='oue__entry-mode-option-title'>Confidence Gate</span>
+                                    <span className='oue__entry-mode-option-meta'>Clean-digit threshold</span>
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 <div className='oue__action'>

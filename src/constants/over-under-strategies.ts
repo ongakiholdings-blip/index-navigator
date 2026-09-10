@@ -223,7 +223,7 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
     },
 };
 
-export const STRATEGY_ORDER: Exclude<StrategyId, 'dual'>[] = ['confidence', 'over1', 'over2', 'under8', 'under7', 'even', 'odd'];
+export const STRATEGY_ORDER: Exclude<StrategyId, 'dual'>[] = ['over1', 'over2', 'under8', 'under7', 'even', 'odd'];
 
 export function getStrategyEntryDigits(id: StrategyId): number[] {
     switch (id) {
@@ -247,10 +247,11 @@ export function matchesStrategyEntrySequence(id: StrategyId, recentDigits: numbe
         case 'confidence':
             return false;
         case 'over1': {
-            if (recentDigits.length < 4) return false;
-            const lastFour = recentDigits.slice(-4);
-            return lastFour.slice(0, 3).every(d => [0, 1, 2].includes(d))
-                && [3, 4, 5, 6, 7].includes(lastFour[3]);
+            if (recentDigits.length < 10) return false;
+            const lastTen = recentDigits.slice(-10);
+            const lowerCount = lastTen.filter(d => [0, 1, 2].includes(d)).length;
+            const higherCount = lastTen.filter(d => [3, 4, 5, 6, 7, 8, 9].includes(d)).length;
+            return lowerCount <= 3 && higherCount >= 7;
         }
         case 'over2':
             return [0, 1, 2].includes(prev) && [3, 4, 5, 6].includes(current);
