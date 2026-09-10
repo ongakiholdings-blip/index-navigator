@@ -192,8 +192,10 @@ const OverUnderEngine: React.FC = observer(() => {
 
     // Config
     const [stake, setStake]           = useState('0.5');
-    const [martingale, setMartingale] = useState('2');
-    const [martingaleEnabled, setMartingaleEnabled] = useState(true);
+    // A multiplier of 1 keeps the next stake equal to the base stake.
+    // Users can increase it explicitly for any selected strategy.
+    const [martingale, setMartingale] = useState('1');
+    const [martingaleEnabled, setMartingaleEnabled] = useState(false);
     const [takeProfit, setTakeProfit] = useState('5');
     const [stopLoss, setStopLoss]     = useState('5');
     const [bulkEnabled, setBulkEnabled] = useState(false);
@@ -1417,38 +1419,6 @@ const OverUnderEngine: React.FC = observer(() => {
                             className='oue__input'
                         />
                     </label>
-                    {martingaleEnabled && (
-                        <label className='oue__field'>
-                            <span>Martingale</span>
-                            <input
-                                type='number'
-                                min='0'
-                                step='0.1'
-                                value={martingale}
-                                onChange={e => setMartingale(e.target.value)}
-                                disabled={isRunning}
-                                className='oue__input'
-                            />
-                        </label>
-                    )}
-                    <label className='oue__entry-toggle'>
-                        <span className='oue__entry-toggle-label'>Use Martingale</span>
-                        <div
-                            className={`oue__toggle${martingaleEnabled ? ' oue__toggle--on' : ''}`}
-                            onClick={() => !isRunning && setMartingaleEnabled(value => !value)}
-                            role='switch'
-                            aria-checked={martingaleEnabled}
-                            aria-disabled={isRunning}
-                            tabIndex={0}
-                            onKeyDown={e => {
-                                if (!isRunning && (e.key === ' ' || e.key === 'Enter')) {
-                                    setMartingaleEnabled(value => !value);
-                                }
-                            }}
-                        >
-                            <div className='oue__toggle-thumb' />
-                        </div>
-                    </label>
                     <label className='oue__field'>
                         <span>Take Profit</span>
                         <input
@@ -1474,6 +1444,40 @@ const OverUnderEngine: React.FC = observer(() => {
                         />
                     </label>
                 </div>
+
+                <label className='oue__entry-toggle'>
+                    <span className='oue__entry-toggle-label'>Use Martingale</span>
+                    <div
+                        className={`oue__toggle${martingaleEnabled ? ' oue__toggle--on' : ''}`}
+                        onClick={() => !isRunning && setMartingaleEnabled(value => !value)}
+                        role='switch'
+                        aria-checked={martingaleEnabled}
+                        aria-disabled={isRunning}
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (!isRunning && (e.key === ' ' || e.key === 'Enter')) {
+                                setMartingaleEnabled(value => !value);
+                            }
+                        }}
+                    >
+                        <div className='oue__toggle-thumb' />
+                    </div>
+                </label>
+
+                {martingaleEnabled && (
+                    <label className='oue__field'>
+                        <span>Martingale multiplier</span>
+                        <input
+                            type='number'
+                            min='1'
+                            step='0.1'
+                            value={martingale}
+                            onChange={e => setMartingale(e.target.value)}
+                            disabled={isRunning}
+                            className='oue__input'
+                        />
+                    </label>
+                )}
 
                 <label className='oue__entry-toggle'>
                     <span className='oue__entry-toggle-label'>
