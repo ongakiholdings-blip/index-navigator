@@ -98,6 +98,47 @@ function round2(n: number): number {
     return Math.round(n * 100) / 100;
 }
 
+function getGroupedDigitCounts(digits: number[]) {
+    const under4 = digits.filter(d => d <= 3).length;
+    const middle = digits.filter(d => d === 4 || d === 5).length;
+    const over5 = digits.filter(d => d >= 6).length;
+    return { under4, middle, over5 };
+}
+
+function evaluateDualGroupSignal(digits: number[], threshold = 70) {
+    const last20 = digits.slice(-20);
+    const counts = getGroupedDigitCounts(last20);
+    const recent = last20.slice(-10);
+    const recentCounts = getGroupedDigitCounts(recent);
+    const extremeTotal = counts.under4 + counts.over5;
+    const recentExtremeTotal = recentCounts.under4 + recentCounts.over5;
+    const frequencyEdge = (extremeTotal - counts.middle) / 20;
+    const recentMomentum = (recentExtremeTotal - recentCounts.middle) / 10;
+    const middlePressure = counts.middle / 20;
+    const underBias = (counts.under4 - counts.over5) / 20;
+
+    const confidence = Math.max(
+        0,
+        Math.min(
+            100,
+            50 + frequencyEdge * 100 + recentMomentum * 50 + underBias * 25 - middlePressure * 40
+        )
+    );
+
+    const strongAdvantage = extremeTotal > counts.middle + 4 && counts.middle <= 7;
+    const recentStrength = recentExtremeTotal > recentCounts.middle + 1;
+    const shouldTrade = last20.length >= 20 && strongAdvantage && recentStrength && confidence >= threshold;
+
+    return {
+        ...counts,
+        recentUnder4: recentCounts.under4,
+        recentMiddle: recentCounts.middle,
+        recentOver5: recentCounts.over5,
+        confidence,
+        shouldTrade,
+    };
+}
+
 // ─── types ────────────────────────────────────────────────────────────────────
 
 interface EngineState {
@@ -204,6 +245,8 @@ const OverUnderEngine: React.FC = observer(() => {
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(true);
     const [entryTriggerMode, setEntryTriggerMode] = useState<'single' | 'pair'>('pair');
+    const [confidenceThreshold, setConfidenceThreshold] = useState('70');
+    const [lastSignalConfidence, setLastSignalConfidence] = useState<number | null>(null);
     // AI strategy engine — 'dual' keeps the original Over 5 / Under 4 pair,
     // any other value runs a single-leg strategy using the recommendations
     // from the Strategy tab (entry filter, recovery method, stake sizing).
@@ -246,6 +289,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const martingaleValue = Number(martingale);
     const takeProfitValue = Number(takeProfit) || 0;
     const stopLossValue = Number(stopLoss) || 0;
+    const confidenceThresholdValue = Number(confidenceThreshold) || 0;
     const eng              = useRef<EngineState>(makeInitState(stakeValue, martingaleValue, takeProfitValue, stopLossValue, entryMode, strategyId, martingaleEnabled));
     const msgSub           = useRef<{ unsubscribe: () => void } | null>(null);
     const passiveSub       = useRef<{ unsubscribe: () => void } | null>(null);
@@ -742,6 +786,9 @@ const OverUnderEngine: React.FC = observer(() => {
                     const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
                     digitWindowRef.current = nextWindow;
                     const recentDigits = nextWindow.slice(-6);
+                    const dualSignal = !selectedStrategy
+                        ? evaluateDualGroupSignal(nextWindow, confidenceThresholdValue)
+                        : null;
                     const hasDualEntryPair =
                         recentDigits.length >= 2 &&
                         ((recentDigits[recentDigits.length - 2] === 4 && recentDigits[recentDigits.length - 1] === 5) ||
@@ -785,6 +832,25 @@ const OverUnderEngine: React.FC = observer(() => {
                                                                     : `Waiting for ${selectedStrategy.label} entry trigger — got ${d}`
                             );
                         }
+                        return;
+                    }
+
+                    if (dualSignal) {
+                        setLastSignalConfidence(dualSignal.confidence);
+                        if (dualSignal.shouldTrade) {
+                            e.waitingForEntry = false;
+                            e.entryDigit      = d;
+                            setLastEntryDigit(d);
+                            setLastSkipReason(null);
+                            setIsWaitingEntry(false);
+                            setStatusMsg(`Signal confidence ${dualSignal.confidence.toFixed(1)}% — executing dual Over 5 / Under 4 pair.`);
+                            fireRoundRef.current();
+                            return;
+                        }
+
+                        setLastSkipReason(
+                            `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
+                        );
                         return;
                     }
 
@@ -1297,6 +1363,9 @@ const OverUnderEngine: React.FC = observer(() => {
                     </div>
                 )}
                 {lastSkipReason && <div className='oue__strategy-skip'>{lastSkipReason}</div>}
+                {strategyId === 'dual' && lastSignalConfidence !== null && (
+                    <div className='oue__strategy-skip'>Signal confidence: <strong>{lastSignalConfidence.toFixed(1)}%</strong></div>
+                )}
             </div>
 
             {/* ── strategy cards ── */}
@@ -1415,6 +1484,19 @@ const OverUnderEngine: React.FC = observer(() => {
                             step='0.05'
                             value={stake}
                             onChange={e => setStake(e.target.value === '' ? '' : e.target.value)}
+                            disabled={isRunning}
+                            className='oue__input'
+                        />
+                    </label>
+                    <label className='oue__field'>
+                        <span>Confidence threshold</span>
+                        <input
+                            type='number'
+                            min='0'
+                            max='100'
+                            step='1'
+                            value={confidenceThreshold}
+                            onChange={e => setConfidenceThreshold(e.target.value)}
                             disabled={isRunning}
                             className='oue__input'
                         />
