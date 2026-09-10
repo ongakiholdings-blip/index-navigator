@@ -23,11 +23,6 @@ const AppHeader = observer(() => {
     const { client } = useStore() ?? {};
     const [authTimeout, setAuthTimeout] = useState(false);
     const [showApiTokenModal, setShowApiTokenModal] = useState(false);
-    const [showCurrencyDrawer, setShowCurrencyDrawer] = useState(false);
-    const [displayCurrency, setDisplayCurrency] = useState<'KES' | 'USD'>(() =>
-        localStorage.getItem('index_navigator_display_currency') === 'USD' ? 'USD' : 'KES'
-    );
-    const [usdToKes, setUsdToKes] = useState<number | null>(null);
     const is_account_regenerating = client?.is_account_regenerating || false;
 
     // Detect OAuth callback on mount (before App.tsx cleans up the URL).
@@ -137,42 +132,6 @@ const AppHeader = observer(() => {
         navigateToTransfer(transferCurrency);
     }, [authData?.currency]);
 
-    useEffect(() => {
-        let cancelled = false;
-        const cached = Number(localStorage.getItem('index_navigator_usd_kes_rate'));
-        const cachedAt = Number(localStorage.getItem('index_navigator_usd_kes_rate_at'));
-        if (cached > 0 && Date.now() - cachedAt < 6 * 60 * 60 * 1000) setUsdToKes(cached);
-        fetch('https://api.frankfurter.app/latest?from=USD&to=KES')
-            .then(response => {
-                if (!response.ok) throw new Error(`Exchange-rate request failed (${response.status})`);
-                return response.json() as Promise<{ rates?: { KES?: number } }>;
-            })
-            .then(data => {
-                const rate = Number(data.rates?.KES);
-                if (!cancelled && rate > 0) {
-                    setUsdToKes(rate);
-                    localStorage.setItem('index_navigator_usd_kes_rate', String(rate));
-                    localStorage.setItem('index_navigator_usd_kes_rate_at', String(Date.now()));
-                }
-            })
-            .catch(error => console.warn('[Currency] Unable to refresh USD/KES rate:', error));
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    const selectDisplayCurrency = (currency: 'KES' | 'USD') => {
-        setDisplayCurrency(currency);
-        localStorage.setItem('index_navigator_display_currency', currency);
-        setShowCurrencyDrawer(false);
-    };
-
-    const accountBalance = Number(String(activeAccount?.balance ?? client?.balance ?? '0').replace(/,/g, '')) || 0;
-    const accountCurrency = activeAccount?.currency || authData?.currency || 'USD';
-    const balanceInUsd = accountCurrency === 'USD' ? accountBalance : accountBalance / (usdToKes || 1);
-    const displayedBalance =
-        displayCurrency === 'KES' && usdToKes ? balanceInUsd * usdToKes : balanceInUsd;
-
     const renderAccountSection = useCallback(
         (position: 'left' | 'right' = 'right') => {
             // Show account switcher and logout when user is fully authenticated
@@ -181,36 +140,8 @@ const AppHeader = observer(() => {
                     // Keep mobile account controls together on the right, after Transfer.
                     return null;
                 } else if (position === 'right') {
-                    // Keep the display balance and currency choice before transfer.
                     return (
                         <div className='auth-actions'>
-                            <div className='currency-control'>
-                                <button
-                                    className='currency-control__button'
-                                    type='button'
-                                    onClick={() => setShowCurrencyDrawer(value => !value)}
-                                    aria-expanded={showCurrencyDrawer}
-                                    aria-label='Choose display currency'
-                                >
-                                    {displayCurrency}
-                                </button>
-                                {showCurrencyDrawer && (
-                                    <div className='currency-control__drawer' role='dialog' aria-label='Display currency'>
-                                        <strong>Display balance in</strong>
-                                        <button type='button' onClick={() => selectDisplayCurrency('KES')} className={displayCurrency === 'KES' ? 'is-selected' : ''}>
-                                            KSH — Kenyan Shilling
-                                        </button>
-                                        <button type='button' onClick={() => selectDisplayCurrency('USD')} className={displayCurrency === 'USD' ? 'is-selected' : ''}>
-                                            USD — US Dollar
-                                        </button>
-                                        {usdToKes && <small>1 USD ≈ {usdToKes.toFixed(2)} KSH</small>}
-                                    </div>
-                                )}
-                            </div>
-                            <div className='auth-actions__balance'>
-                                <span>Balance</span>
-                                <strong>{displayCurrency} {displayedBalance.toFixed(2)}</strong>
-                            </div>
                             <Button
                                 className='auth-actions__transfer-btn'
                                 primary
@@ -310,12 +241,7 @@ const AppHeader = observer(() => {
             is_account_regenerating,
             isOAuthPending,
             authData,
-            displayCurrency,
-            displayedBalance,
             handleTransfer,
-            selectDisplayCurrency,
-            showCurrencyDrawer,
-            usdToKes,
             handleLogin,
             handleSignup,
         ]
