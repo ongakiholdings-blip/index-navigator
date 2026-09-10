@@ -107,13 +107,18 @@ function getGroupedDigitCounts(digits: number[]) {
 
 function evaluateDualGroupSignal(digits: number[], threshold = 70) {
     const last20 = digits.slice(-20);
+    const last5 = digits.slice(-5);
     const counts = getGroupedDigitCounts(last20);
     const recent = last20.slice(-10);
     const recentCounts = getGroupedDigitCounts(recent);
     const extremeTotal = counts.under4 + counts.over5;
     const recentExtremeTotal = recentCounts.under4 + recentCounts.over5;
-    const middleDominant20 = counts.middle >= 8;
+    const middleCount20 = counts.middle;
+    const middleCount5 = last5.filter(d => d === 4 || d === 5).length;
+    const middleDominant20 = middleCount20 > 6;
     const middleDominant10 = recentCounts.middle >= 5;
+    const recentMiddleTrigger = middleCount5 === 1;
+    const repeatedMiddleRisk = middleCount5 >= 3;
     const frequencyEdge = (extremeTotal - counts.middle) / 20;
     const recentMomentum = (recentExtremeTotal - recentCounts.middle) / 10;
     const middlePressure = counts.middle / 20;
@@ -132,7 +137,8 @@ function evaluateDualGroupSignal(digits: number[], threshold = 70) {
     const shouldTrade =
         last20.length >= 20 &&
         !middleDominant20 &&
-        !middleDominant10 &&
+        !repeatedMiddleRisk &&
+        recentMiddleTrigger &&
         strongAdvantage &&
         recentStrength &&
         confidence >= threshold;
@@ -142,10 +148,46 @@ function evaluateDualGroupSignal(digits: number[], threshold = 70) {
         recentUnder4: recentCounts.under4,
         recentMiddle: recentCounts.middle,
         recentOver5: recentCounts.over5,
+        middleCount20,
+        middleCount5,
         middleDominant20,
         middleDominant10,
+        recentMiddleTrigger,
+        repeatedMiddleRisk,
         confidence,
         shouldTrade,
+    };
+}
+
+function evaluateConfidenceGateSignal(digits: number[], threshold = 70) {
+    const recent20 = digits.slice(-20);
+    const recent5 = digits.slice(-5);
+    if (recent20.length < 20) {
+        return {
+            confidence: 0,
+            shouldTrade: false,
+            middleCount20: 0,
+            middleCount5: 0,
+            cleanDigits: 0,
+            threshold,
+        };
+    }
+
+    const middleCount20 = recent20.filter(d => d === 4 || d === 5).length;
+    const middleCount5 = recent5.filter(d => d === 4 || d === 5).length;
+    const cleanDigits = recent20.filter(d => d !== 4 && d !== 5).length;
+    const confidence = (cleanDigits / recent20.length) * 100;
+    const blockedByMiddle = middleCount20 > 6 || middleCount5 >= 3;
+    const validEntryWindow = middleCount5 === 1;
+    const shouldTrade = !blockedByMiddle && validEntryWindow && confidence >= threshold;
+
+    return {
+        confidence,
+        shouldTrade,
+        middleCount20,
+        middleCount5,
+        cleanDigits,
+        threshold,
     };
 }
 
@@ -446,7 +488,7 @@ const OverUnderEngine: React.FC = observer(() => {
         const e = eng.current;
         if (!e.running || e.roundInFlight) return;
 
-        const selectedStrategy = e.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[e.strategyId];
+        const selectedStrategy = e.strategyId === 'dual' || e.strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[e.strategyId];
 
         const bulkTrades = bulkEnabled ? Number(bulkCount) : 1;
 
@@ -665,7 +707,7 @@ const OverUnderEngine: React.FC = observer(() => {
             }
         }
 
-        if (e.strategyId !== 'dual') {
+        if (e.strategyId !== 'dual' && e.strategyId !== 'confidence') {
             const singleWon = won;
             const nextSingleStake = e.overStake;
             setSingleStake(nextSingleStake);
@@ -742,7 +784,7 @@ const OverUnderEngine: React.FC = observer(() => {
                 });
                 setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
                 if (eng.current.running && eng.current.useEntryMode && eng.current.waitingForEntry && !eng.current.roundInFlight) {
-                    const selectedStrategy = eng.current.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[eng.current.strategyId];
+                    const selectedStrategy = eng.current.strategyId === 'dual' || eng.current.strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[eng.current.strategyId];
                     const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
                     digitWindowRef.current = nextWindow;
                     const recentDigits = nextWindow.slice(-6);
@@ -803,9 +845,13 @@ const OverUnderEngine: React.FC = observer(() => {
                         }
 
                         setLastSkipReason(
-                            dualSignal.middleDominant20 || dualSignal.middleDominant10
-                                ? `No trade — digits 4 and 5 are dominating the market (Middle ${dualSignal.middle}/20, recent ${dualSignal.recentMiddle}/10).`
-                                : `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
+                            dualSignal.middleDominant20
+                                ? `No trade — digits 4 and 5 appeared ${dualSignal.middleCount20} times in the last 20 ticks, which is over the 6-tick limit.`
+                                : dualSignal.repeatedMiddleRisk
+                                    ? `No trade — digits 4 and 5 appeared ${dualSignal.middleCount5} times in the last 5 ticks, so the entry window is blocked.`
+                                    : dualSignal.recentMiddleTrigger
+                                        ? `Waiting for a clean dual-entry trigger: 4 or 5 must appear exactly once in the last 5 ticks. Current 5-tick middle count: ${dualSignal.middleCount5}.`
+                                        : `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
                         );
                         return;
                     }
@@ -899,11 +945,13 @@ const OverUnderEngine: React.FC = observer(() => {
         }
         if (!api_base.api) { setStatusMsg('⚠ Not connected — please log in first'); return; }
 
-        const resolvedStrategy = strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[strategyId];
+        const resolvedStrategy = strategyId === 'dual' || strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[strategyId];
         // Risk controls always come from the values entered in the active form.
         // Strategy recommendations are informational and must not replace them.
         eng.current = makeInitState(stakeValue, martingaleValue, takeProfitValue, stopLossValue, entryMode, strategyId, martingaleEnabled);
         eng.current.running = true;
+        eng.current.useEntryMode = entryMode;
+        eng.current.waitingForEntry = false;
         if (resolvedStrategy) {
             eng.current.baseStake = stakeValue;
             eng.current.overStake = stakeValue;
@@ -924,7 +972,7 @@ const OverUnderEngine: React.FC = observer(() => {
         setLastOverResult(null);
         setLastUnderResult(null);
         setLastEntryDigit(null);
-        setIsWaitingEntry(entryMode);
+        setIsWaitingEntry(false);
         const statusStart = resolvedStrategy
             ? (strategyId === 'over1'
                 ? '👀 Watching for Over 1 sequence: 0–2, 0–2, 0–2, then 3–7…'
@@ -940,7 +988,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                         ? '👀 Watching for Odd sequence: even, even, even, skip, odd…'
                                         : `👀 Watching for ${resolvedStrategy.label} trigger ${getStrategyEntryDigits(strategyId).join(', ')}…`)
             : entryMode
-                ? '👀 Waiting for a 4 or 5 trigger…'
+               ? '👀 Dual entry window: block if 4/5 >6 in 20 or >=3 in 5; trade only when 4/5 appears once in 5…'
                 : 'Connecting…';
         setStatusMsg(statusStart);
 
@@ -954,10 +1002,6 @@ const OverUnderEngine: React.FC = observer(() => {
             localize('Account switching is disabled while your bot is running. Please stop your bot before switching accounts.')
         );
         (ui as any)?.setPromptHandler?.(true);
-
-        // Keep the existing passive tick history while ensuring the selected
-        // market subscription is live for the engine.
-        await startPassiveSub(symbolRef.current, false);
 
         // msgSub handles contract results only — ticks are in passiveSub
         if (msgSub.current) msgSub.current.unsubscribe();
@@ -977,11 +1021,23 @@ const OverUnderEngine: React.FC = observer(() => {
             if (!entryMode) {
                 setStatusMsg('Connected — firing first round…');
                 await fireRound();
-            } else if (digitWindowRef.current.length > 0) {
+            }
+
+            // Keep the existing passive tick history while ensuring the selected
+            // market subscription is live for the engine. This is intentionally
+            // started after the direct-start case so the engine does not wait for
+            // an entry trigger when entry point mode is off.
+            await startPassiveSub(symbolRef.current, false);
+
+            if (!entryMode) {
+                return;
+            }
+
+            if (digitWindowRef.current.length > 0) {
                 // Evaluate loaded history immediately when entry mode starts,
                 // so a ready condition is not missed until the next tick.
                 const activeStrategyId = eng.current.strategyId;
-                const selectedStrategy = activeStrategyId === 'dual' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
+                const selectedStrategy = activeStrategyId === 'dual' || activeStrategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
                 const recentDigits = digitWindowRef.current.slice(-6);
                 const latestDigit = recentDigits[recentDigits.length - 1];
                 const shouldTrigger = selectedStrategy
@@ -989,7 +1045,9 @@ const OverUnderEngine: React.FC = observer(() => {
                         (['over1', 'over2', 'under8', 'under7', 'even', 'odd'].includes(activeStrategyId)
                             ? matchesStrategyEntrySequence(activeStrategyId, recentDigits)
                             : getStrategyEntryDigits(activeStrategyId).includes(latestDigit))
-                    : ENTRY_DIGITS.has(latestDigit);
+                    : (activeStrategyId === 'confidence'
+                        ? evaluateConfidenceGateSignal(digitWindowRef.current, confidenceThresholdValue).shouldTrade
+                        : ENTRY_DIGITS.has(latestDigit));
 
                 if (shouldTrigger && latestDigit !== undefined) {
                     eng.current.waitingForEntry = false;
@@ -1090,7 +1148,8 @@ const OverUnderEngine: React.FC = observer(() => {
     const activeMarket = MARKETS.find(m => m.symbol === symbol) ?? MARKETS[0];
     const digitCounts = Array.from({ length: 10 }, (_, digit) => digitWindow.filter(value => value === digit).length);
     const digitPercentages = digitCounts.map(count => digitWindow.length > 0 ? (count / digitWindow.length) * 100 : 0);
-    const isSingleStrategyMode = strategyId !== 'dual';
+    const isDualStrategyMode = strategyId === 'dual' || strategyId === 'confidence';
+    const isSingleStrategyMode = !isDualStrategyMode;
     const activeStrategyDef = isSingleStrategyMode ? STRATEGY_DEFINITIONS[strategyId] : null;
 
     return (
@@ -1156,7 +1215,7 @@ const OverUnderEngine: React.FC = observer(() => {
                 <div className='oue__header'>
                 <div className='oue__title'>
                     <span className='oue__title-icon'>🤖</span>
-                    <span>{isSingleStrategyMode ? `${activeStrategyDef?.label.toUpperCase()} AI BOT` : 'AI BOTS'}</span>
+                    <span>{isSingleStrategyMode ? `${activeStrategyDef?.label.toUpperCase()} AI BOT` : strategyId === 'confidence' ? 'CONFIDENCE GATE AI BOT' : 'AI BOTS'}</span>
 
                     {/* entry-mode indicator badge */}
                     {entryMode && (
@@ -1590,6 +1649,37 @@ const OverUnderEngine: React.FC = observer(() => {
                         <div className='oue__toggle-thumb' />
                     </div>
                 </label>
+
+                {entryMode && (
+                    <div className='oue__entry-mode-options' aria-label='Entry point mode selection'>
+                        <button
+                            type='button'
+                            className={`oue__entry-mode-option${strategyId === 'dual' ? ' oue__entry-mode-option--active' : ''}`}
+                            onClick={() => {
+                                if (isRunning) return;
+                                setStrategyId('dual');
+                                setEntryMode(true);
+                            }}
+                            disabled={isRunning}
+                        >
+                            <span className='oue__entry-mode-option-title'>Dual Over/Under</span>
+                            <span className='oue__entry-mode-option-meta'>4/5 entry guard</span>
+                        </button>
+                        <button
+                            type='button'
+                            className={`oue__entry-mode-option${strategyId === 'confidence' ? ' oue__entry-mode-option--active' : ''}`}
+                            onClick={() => {
+                                if (isRunning) return;
+                                setStrategyId('confidence');
+                                setEntryMode(true);
+                            }}
+                            disabled={isRunning}
+                        >
+                            <span className='oue__entry-mode-option-title'>Confidence Gate</span>
+                            <span className='oue__entry-mode-option-meta'>Clean-digit threshold</span>
+                        </button>
+                    </div>
+                )}
 
                 <div className='oue__action'>
                     <div className={`oue__status${isRunning ? ' oue__status--running' : ''}`}>

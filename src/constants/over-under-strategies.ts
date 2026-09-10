@@ -5,7 +5,7 @@
 // the entry filters, staking discipline, and recovery method described for
 // each strategy instead of only running the fixed Over 5 / Under 4 pair.
 
-export type StrategyId = 'dual' | 'over1' | 'over2' | 'under8' | 'under7' | 'even' | 'odd';
+export type StrategyId = 'dual' | 'confidence' | 'over1' | 'over2' | 'under8' | 'under7' | 'even' | 'odd';
 
 export type RecoveryMethod = 'martingale' | 'dalembert' | 'flat';
 
@@ -41,6 +41,30 @@ export interface StrategyDefinition {
 }
 
 export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyDefinition> = {
+    confidence: {
+        id: 'confidence',
+        label: 'Confidence Gate',
+        badge: 'CONF',
+        badgeColor: '#f97316',
+        contractType: null,
+        barrier: null,
+        winProbabilityPct: 75,
+        risk: 'Medium',
+        recovery: 'martingale',
+        recommendedStakePct: 1.5,
+        takeProfit: 5,
+        stopLoss: 10,
+        cautionDigits: [4, 5],
+        cautionThresholdPct: 35,
+        intro:
+            'Trade only when the remaining digit distribution outside 4 and 5 exceeds the configured confidence threshold. This keeps entries focused on the cleanest market conditions and suppresses weak 4/5-heavy cycles.',
+        tips: [
+            { title: '1. Measure the clean-market share', body: 'The engine sums the percentages for digits 0, 1, 2, 3, 6, 7, 8, and 9 and compares that value to your threshold. If the share of clean digits is below the required level, the bot waits instead of forcing an entry.' },
+            { title: '2. Keep 4 and 5 out of the trigger', body: 'The strategy ignores 4 and 5 when calculating confidence. This avoids trading during the exact middle-digit clusters that are known to create noisy, low-quality entries.' },
+            { title: '3. Use a strict threshold', body: 'Set the threshold carefully. Higher values reduce false entries but also reduce the number of trades. A moderate threshold keeps the bot selective without leaving it idle for long stretches.' },
+        ],
+        note: 'Confidence is computed from the combined percentage of digits excluding 4 and 5. Trade only when that percentage meets or exceeds the configured threshold.',
+    },
     over1: {
         id: 'over1',
         label: 'Over 1',
@@ -199,7 +223,7 @@ export const STRATEGY_DEFINITIONS: Record<Exclude<StrategyId, 'dual'>, StrategyD
     },
 };
 
-export const STRATEGY_ORDER: Exclude<StrategyId, 'dual'>[] = ['over1', 'over2', 'under8', 'under7', 'even', 'odd'];
+export const STRATEGY_ORDER: Exclude<StrategyId, 'dual'>[] = ['confidence', 'over1', 'over2', 'under8', 'under7', 'even', 'odd'];
 
 export function getStrategyEntryDigits(id: StrategyId): number[] {
     switch (id) {
@@ -220,6 +244,8 @@ export function matchesStrategyEntrySequence(id: StrategyId, recentDigits: numbe
     const current = recentDigits[recentDigits.length - 1];
 
     switch (id) {
+        case 'confidence':
+            return false;
         case 'over1': {
             if (recentDigits.length < 4) return false;
             const lastFour = recentDigits.slice(-4);
@@ -259,6 +285,7 @@ export function matchesStrategyEntrySequence(id: StrategyId, recentDigits: numbe
 /** Returns true if the digit is a "winning" digit for the given strategy. */
 export function isWinningDigit(id: Exclude<StrategyId, 'dual'>, digit: number): boolean {
     switch (id) {
+        case 'confidence': return digit !== 4 && digit !== 5;
         case 'over1': return digit > 1;
         case 'over2': return digit > 2;
         case 'under8': return digit < 8;
