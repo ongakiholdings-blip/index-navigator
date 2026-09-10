@@ -112,6 +112,8 @@ function evaluateDualGroupSignal(digits: number[], threshold = 70) {
     const recentCounts = getGroupedDigitCounts(recent);
     const extremeTotal = counts.under4 + counts.over5;
     const recentExtremeTotal = recentCounts.under4 + recentCounts.over5;
+    const middleDominant20 = counts.middle >= 8;
+    const middleDominant10 = recentCounts.middle >= 5;
     const frequencyEdge = (extremeTotal - counts.middle) / 20;
     const recentMomentum = (recentExtremeTotal - recentCounts.middle) / 10;
     const middlePressure = counts.middle / 20;
@@ -121,19 +123,27 @@ function evaluateDualGroupSignal(digits: number[], threshold = 70) {
         0,
         Math.min(
             100,
-            50 + frequencyEdge * 100 + recentMomentum * 50 + underBias * 25 - middlePressure * 40
+            50 + frequencyEdge * 100 + recentMomentum * 50 + underBias * 25 - middlePressure * 80
         )
     );
 
-    const strongAdvantage = extremeTotal > counts.middle + 4 && counts.middle <= 7;
-    const recentStrength = recentExtremeTotal > recentCounts.middle + 1;
-    const shouldTrade = last20.length >= 20 && strongAdvantage && recentStrength && confidence >= threshold;
+    const strongAdvantage = extremeTotal > counts.middle + 6 && counts.middle <= 7;
+    const recentStrength = recentExtremeTotal > recentCounts.middle + 2 && !middleDominant10;
+    const shouldTrade =
+        last20.length >= 20 &&
+        !middleDominant20 &&
+        !middleDominant10 &&
+        strongAdvantage &&
+        recentStrength &&
+        confidence >= threshold;
 
     return {
         ...counts,
         recentUnder4: recentCounts.under4,
         recentMiddle: recentCounts.middle,
         recentOver5: recentCounts.over5,
+        middleDominant20,
+        middleDominant10,
         confidence,
         shouldTrade,
     };
@@ -849,7 +859,9 @@ const OverUnderEngine: React.FC = observer(() => {
                         }
 
                         setLastSkipReason(
-                            `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
+                            dualSignal.middleDominant20 || dualSignal.middleDominant10
+                                ? `No trade — digits 4 and 5 are dominating the market (Middle ${dualSignal.middle}/20, recent ${dualSignal.recentMiddle}/10).`
+                                : `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
                         );
                         return;
                     }
