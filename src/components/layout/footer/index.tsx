@@ -49,6 +49,9 @@ const Footer = () => {
             <ServerTime />
             <div className='app-footer__vertical-line' />
             <NetworkStatus />
+            <div className='app-footer__copyright' title='All rights reserved. Unauthorized copying, modification, or resale is prohibited.'>
+                © 2026 <strong>Index_Navigator</strong>
+            </div>
 
             {/* [AI] Only show language modal if language settings are enabled */}
             {enableLanguageSettings && isModalOpenFor('DesktopLanguagesModal') && (
