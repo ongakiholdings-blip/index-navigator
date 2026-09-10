@@ -818,7 +818,7 @@ const OverUnderEngine: React.FC = observer(() => {
                         } else {
                             setLastSkipReason(
                                 eng.current.strategyId === 'over1'
-                                    ? `Waiting for Over 1 cluster: lower digits {0,1,2} appear 3 or fewer times in the last 10 digits — got ${d}`
+                                    ? `Waiting for 3 consecutive low digits from 0, 1, or 2 — got ${d}`
                                     : eng.current.strategyId === 'over2'
                                         ? `Waiting for Over 2 entry sequence: 0, 1, or 2 → 3, 4, 5, or 6 — got ${d}`
                                         : eng.current.strategyId === 'under8'
@@ -982,7 +982,7 @@ const OverUnderEngine: React.FC = observer(() => {
         setIsWaitingEntry(false);
         const statusStart = resolvedStrategy
             ? (strategyId === 'over1'
-                ? '👀 Watching for Over 1 cluster: lower digits {0,1,2} appear 3 or fewer times in the last 10 digits…'
+                ? '👀 Watching for 3 consecutive low digits: 0, 1, or 2…'
                 : strategyId === 'over2'
                     ? '👀 Watching for Over 2 sequence: 0, 1, or 2 → 3, 4, 5, or 6…'
                     : strategyId === 'under8'
@@ -1229,7 +1229,7 @@ const OverUnderEngine: React.FC = observer(() => {
                         <span className='oue__entry-badge'>
                             {isSingleStrategyMode
                                 ? strategyId === 'over1'
-                                    ? <>Entry: <strong>lower 0, 1, 2 count ≤ 3 in last 10 digits</strong></>
+                                    ? <>Entry: <strong>3 consecutive digits from 0–2</strong></>
                                     : strategyId === 'over2'
                                         ? <>Entry: <strong>0/1/2 → 3–6</strong></>
                                         : strategyId === 'under8'
@@ -1370,7 +1370,7 @@ const OverUnderEngine: React.FC = observer(() => {
                         <span className='oue__entry-waiting-dot' />
                         {isSingleStrategyMode
                             ? strategyId === 'over1'
-                                ? <>Watching for <strong>lower 0, 1, 2 count ≤ 3 in the last 10 digits</strong> before the next Over 1 trade…</>
+                                ? <>Watching for <strong>3 consecutive digits from 0–2</strong> before the next Over 1 trade…</>
                                 : strategyId === 'over2'
                                     ? <>Watching for the sequence <strong>0/1/2 → 3, 4, 5, or 6</strong> before the next Over 2 trade…</>
                                     : strategyId === 'under8'
