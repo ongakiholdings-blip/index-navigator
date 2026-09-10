@@ -528,7 +528,9 @@ const OverUnderEngine: React.FC = observer(() => {
         const entryLabel = e.entryDigit !== null ? ` [entry: ${e.entryDigit}]` : '';
         const promptLabel = selectedStrategy
             ? `${selectedStrategy.label} strategy`
-            : 'Over 5 + Under 4';
+            : e.strategyId === 'confidence'
+                ? 'Confidence Gate'
+                : 'Over 5 + Under 4';
         setStatusMsg(`⚡ Placing ${promptLabel}${entryLabel}…`);
 
         try {
@@ -788,8 +790,10 @@ const OverUnderEngine: React.FC = observer(() => {
                     const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
                     digitWindowRef.current = nextWindow;
                     const recentDigits = nextWindow.slice(-6);
-                    const dualSignal = !selectedStrategy
-                        ? evaluateDualGroupSignal(nextWindow, confidenceThresholdValue)
+                    const activeEntrySignal = !selectedStrategy
+                        ? (eng.current.strategyId === 'confidence'
+                            ? evaluateConfidenceGateSignal(nextWindow, confidenceThresholdValue)
+                            : evaluateDualGroupSignal(nextWindow, confidenceThresholdValue))
                         : null;
                     if (selectedStrategy) {
                         const strategyEntryDigits = getStrategyEntryDigits(eng.current.strategyId);
@@ -831,27 +835,30 @@ const OverUnderEngine: React.FC = observer(() => {
                         return;
                     }
 
-                    if (dualSignal) {
-                        setLastSignalConfidence(dualSignal.confidence);
-                        if (dualSignal.shouldTrade) {
+                    if (activeEntrySignal) {
+                        setLastSignalConfidence(activeEntrySignal.confidence);
+                        if (activeEntrySignal.shouldTrade) {
                             eng.current.waitingForEntry = false;
                             eng.current.entryDigit      = d;
                             setLastEntryDigit(d);
                             setLastSkipReason(null);
                             setIsWaitingEntry(false);
-                            setStatusMsg(`Signal confidence ${dualSignal.confidence.toFixed(1)}% — executing dual Over 5 / Under 4 pair.`);
+                            const modeLabel = eng.current.strategyId === 'confidence' ? 'Confidence Gate' : 'Dual Over 5 / Under 4';
+                            setStatusMsg(`Signal confidence ${activeEntrySignal.confidence.toFixed(1)}% — executing ${modeLabel} pair.`);
                             fireRoundRef.current();
                             return;
                         }
 
                         setLastSkipReason(
-                            dualSignal.middleDominant20
-                                ? `No trade — digits 4 and 5 appeared ${dualSignal.middleCount20} times in the last 20 ticks, which is over the 6-tick limit.`
-                                : dualSignal.repeatedMiddleRisk
-                                    ? `No trade — digits 4 and 5 appeared ${dualSignal.middleCount5} times in the last 5 ticks, so the entry window is blocked.`
-                                    : dualSignal.recentMiddleTrigger
-                                        ? `Waiting for a clean dual-entry trigger: 4 or 5 must appear exactly once in the last 5 ticks. Current 5-tick middle count: ${dualSignal.middleCount5}.`
-                                        : `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
+                            eng.current.strategyId === 'confidence'
+                                ? `No trade — confidence ${activeEntrySignal.confidence.toFixed(1)}% is below the ${confidenceThresholdValue}% threshold, or 4/5 is still too dominant.`
+                                : activeEntrySignal.middleDominant20
+                                    ? `No trade — digits 4 and 5 appeared ${activeEntrySignal.middleCount20} times in the last 20 ticks, which is over the 6-tick limit.`
+                                    : activeEntrySignal.repeatedMiddleRisk
+                                        ? `No trade — digits 4 and 5 appeared ${activeEntrySignal.middleCount5} times in the last 5 ticks, so the entry window is blocked.`
+                                        : activeEntrySignal.recentMiddleTrigger
+                                            ? `Waiting for a clean dual-entry trigger: 4 or 5 must appear exactly once in the last 5 ticks. Current 5-tick middle count: ${activeEntrySignal.middleCount5}.`
+                                            : `Waiting for strong extreme-group dominance: Under 4 ${activeEntrySignal.under4}/20, Middle ${activeEntrySignal.middle}/20, Over 5 ${activeEntrySignal.over5}/20, confidence ${activeEntrySignal.confidence.toFixed(1)}%.`
                         );
                         return;
                     }
