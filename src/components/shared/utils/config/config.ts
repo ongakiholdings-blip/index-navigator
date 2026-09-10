@@ -53,6 +53,13 @@ export const isProduction = () => {
 
 export const isLocal = () => /localhost(:\d+)?$/i.test(window.location.hostname);
 
+export const getCurrentRedirectUri = (): string => {
+    if (typeof window === 'undefined') return '';
+    const { origin, pathname } = window.location;
+    const sanitizedPath = pathname === '/' ? '' : pathname.replace(/\/+$/, '');
+    return `${origin}${sanitizedPath}`;
+};
+
 const getDefaultServerURL = () => {
     const isProductionEnv = isProduction();
 
@@ -124,7 +131,7 @@ export const generateOAuthURL = async (prompt?: string): Promise<string> => {
 
         const config: AuthConfig = {
             clientId,
-            redirectUri: window.location.origin,
+            redirectUri: getCurrentRedirectUri(),
             scopes: 'trade',
         };
 
