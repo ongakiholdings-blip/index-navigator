@@ -958,7 +958,7 @@ const OverUnderEngine: React.FC = observer(() => {
         eng.current = makeInitState(stakeValue, martingaleValue, takeProfitValue, stopLossValue, entryMode, strategyId, martingaleEnabled);
         eng.current.running = true;
         eng.current.useEntryMode = entryMode;
-        eng.current.waitingForEntry = false;
+        eng.current.waitingForEntry = entryMode;
         if (resolvedStrategy) {
             eng.current.baseStake = stakeValue;
             eng.current.overStake = stakeValue;
@@ -979,7 +979,7 @@ const OverUnderEngine: React.FC = observer(() => {
         setLastOverResult(null);
         setLastUnderResult(null);
         setLastEntryDigit(null);
-        setIsWaitingEntry(false);
+        setIsWaitingEntry(entryMode);
         const statusStart = resolvedStrategy
             ? (strategyId === 'over1'
                 ? '👀 Watching for 3 consecutive digits in the 0–2 bracket (any random order)…'
