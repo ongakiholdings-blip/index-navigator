@@ -254,7 +254,6 @@ const OverUnderEngine: React.FC = observer(() => {
     const [symbol, setSymbol]         = useState('1HZ10V');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(true);
-    const [entryTriggerMode, setEntryTriggerMode] = useState<'single' | 'pair'>('pair');
     const [confidenceThreshold, setConfidenceThreshold] = useState('70');
     const [lastSignalConfidence, setLastSignalConfidence] = useState<number | null>(null);
     // AI strategy engine — 'dual' keeps the original Over 5 / Under 4 pair,
@@ -274,7 +273,6 @@ const OverUnderEngine: React.FC = observer(() => {
     const [digits, setDigits]                             = useState<number[]>([]);
     const [digitWindow, setDigitWindow]                   = useState<number[]>([]);
     const [currentDigit, setCurrentDigit]                 = useState<number | null>(null);
-    const [cursorTick, setCursorTick]                     = useState(0);
     const [prices, setPrices]                             = useState<string[]>([]);
     const [totalProfit, setTotalProfit]                   = useState(0);
     const [overWins, setOverWins]                         = useState(0);
@@ -313,7 +311,6 @@ const OverUnderEngine: React.FC = observer(() => {
     const pendingForget    = useRef<boolean>(false);
     const fireRoundRef     = useRef<() => void>(() => {});
     const symbolRef        = useRef(symbol);
-    const entryTriggerModeRef = useRef(entryTriggerMode);
     const digitWindowRef   = useRef<number[]>([]);
     const subscriptionGenerationRef = useRef(0);
     const latestDigitRef   = useRef<number | null>(null);   // always the most recent tick digit
@@ -321,7 +318,6 @@ const OverUnderEngine: React.FC = observer(() => {
     const marketTriggerRef = useRef<HTMLButtonElement>(null);
     const marketDropdownRef = useRef<HTMLDivElement>(null);
     useEffect(() => { symbolRef.current = symbol; }, [symbol]);
-    useEffect(() => { entryTriggerModeRef.current = entryTriggerMode; }, [entryTriggerMode]);
 
     // Close dropdown on outside click — must exclude both the trigger and the portaled dropdown
     useEffect(() => {
@@ -722,6 +718,111 @@ const OverUnderEngine: React.FC = observer(() => {
         // effect can detect when api_base.init() replaces it with a new instance.
         passiveApiRef.current = api_base.api;
 
+        passiveSub.current = (api_base.api as any).onMessage().subscribe((msg: any) => {
+            const data = getApiData(msg);
+            const tick = data?.msg_type === 'tick' ? data.tick : data?.tick;
+            if (tick?.quote !== undefined && symbolRef.current === sym && (!tick.symbol || tick.symbol === sym)) {
+                const pipSize = Number(tick.pip_size ?? (api_base as any).pip_sizes?.[sym]);
+                const priceStr = formatQuote(tick.quote, pipSize);
+                const d = getLastDigit(priceStr);
+                if (d === null) return;
+                latestDigitRef.current = d;
+                lastTickAtRef.current = Date.now();
+                setCurrentDigit(d);
+                setDigits(prev  => {
+                    const n = [...prev, d];
+                    const next = n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n;
+                    return next;
+                });
+                setDigitWindow(prev => {
+                    const next = [...prev, d];
+                    const bounded = next.length > DIGIT_WINDOW ? next.slice(-DIGIT_WINDOW) : next;
+                    digitWindowRef.current = bounded;
+                    return bounded;
+                });
+                setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
+                if (eng.current.running && eng.current.useEntryMode && eng.current.waitingForEntry && !eng.current.roundInFlight) {
+                    const selectedStrategy = eng.current.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[eng.current.strategyId];
+                    const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
+                    digitWindowRef.current = nextWindow;
+                    const recentDigits = nextWindow.slice(-6);
+                    const dualSignal = !selectedStrategy
+                        ? evaluateDualGroupSignal(nextWindow, confidenceThresholdValue)
+                        : null;
+                    if (selectedStrategy) {
+                        const strategyEntryDigits = getStrategyEntryDigits(eng.current.strategyId);
+                        if (eng.current.strategyId !== 'over1' && eng.current.strategyId !== 'under8' && isCautionCluster(selectedStrategy, recentDigits)) {
+                            setLastSkipReason(`Skipped ${selectedStrategy.label}: caution cluster detected (${selectedStrategy.cautionDigits.join(', ')})`);
+                            setIsWaitingEntry(true);
+                            return;
+                        }
+
+                        const sequenceMatched = matchesStrategyEntrySequence(eng.current.strategyId, recentDigits);
+                        const shouldTrigger = eng.current.strategyId === 'over1' || eng.current.strategyId === 'over2' || eng.current.strategyId === 'under8' || eng.current.strategyId === 'under7' || eng.current.strategyId === 'even' || eng.current.strategyId === 'odd'
+                            ? sequenceMatched
+                            : strategyEntryDigits.includes(d);
+
+                        if (shouldTrigger) {
+                            eng.current.waitingForEntry = false;
+                            eng.current.entryDigit      = d;
+                            setLastEntryDigit(d);
+                            setLastSkipReason(null);
+                            setIsWaitingEntry(false);
+                            fireRoundRef.current();
+                        } else {
+                            setLastSkipReason(
+                                eng.current.strategyId === 'over1'
+                                    ? `Waiting for Over 1 entry sequence: 3 digits from 0–2, then 3–7 — got ${d}`
+                                    : eng.current.strategyId === 'over2'
+                                        ? `Waiting for Over 2 entry sequence: 0, 1, or 2 → 3, 4, 5, or 6 — got ${d}`
+                                        : eng.current.strategyId === 'under8'
+                                            ? `Waiting for Under 8 entry sequence: 3 digits from 7–9, then 3–7 — got ${d}`
+                                            : eng.current.strategyId === 'under7'
+                                                ? `Waiting for Under 7 entry sequence: 7, 8, or 9 → 3, 6, 7, 8, or 9 — got ${d}`
+                                                : eng.current.strategyId === 'even'
+                                                    ? `Waiting for Even entry sequence: odd, odd, odd, skip, even — got ${d}`
+                                                    : eng.current.strategyId === 'odd'
+                                                        ? `Waiting for Odd entry sequence: even, even, even, skip, odd — got ${d}`
+                                                        : `Waiting for ${selectedStrategy.label} entry trigger — got ${d}`
+                            );
+                        }
+                        return;
+                    }
+
+                    if (dualSignal) {
+                        setLastSignalConfidence(dualSignal.confidence);
+                        if (dualSignal.shouldTrade) {
+                            eng.current.waitingForEntry = false;
+                            eng.current.entryDigit      = d;
+                            setLastEntryDigit(d);
+                            setLastSkipReason(null);
+                            setIsWaitingEntry(false);
+                            setStatusMsg(`Signal confidence ${dualSignal.confidence.toFixed(1)}% — executing dual Over 5 / Under 4 pair.`);
+                            fireRoundRef.current();
+                            return;
+                        }
+
+                        setLastSkipReason(
+                            dualSignal.middleDominant20 || dualSignal.middleDominant10
+                                ? `No trade — digits 4 and 5 are dominating the market (Middle ${dualSignal.middle}/20, recent ${dualSignal.recentMiddle}/10).`
+                                : `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
+                        );
+                        return;
+                    }
+
+                    if (ENTRY_DIGITS.has(d)) {
+                        eng.current.waitingForEntry = false;
+                        eng.current.entryDigit      = d;
+                        setLastEntryDigit(d);
+                        setLastSkipReason(null);
+                        setIsWaitingEntry(false);
+                        fireRoundRef.current();
+                        return;
+                    }
+                }
+            }
+        });
+
         if (resetHistory) {
             let historyResponse: any;
             try {
@@ -733,7 +834,6 @@ const OverUnderEngine: React.FC = observer(() => {
                 });
             } catch {
                 setStatusMsg('⚠ Unable to load live tick history');
-                return;
             }
             const history = historyResponse?.history;
             const pricesFromHistory = Array.isArray(history?.prices) ? history.prices : [];
@@ -759,133 +859,6 @@ const OverUnderEngine: React.FC = observer(() => {
                 lastTickAtRef.current = Date.now();
             }
         }
-
-        passiveSub.current = (api_base.api as any).onMessage().subscribe((msg: any) => {
-            const data = getApiData(msg);
-            const tick = data?.msg_type === 'tick' ? data.tick : data?.tick;
-            if (tick?.quote !== undefined && symbolRef.current === sym && (!tick.symbol || tick.symbol === sym)) {
-                // Numeric quotes can lose trailing zeroes (for example 123.450),
-                // so use Deriv's pip size before reading the final digit.
-                const pipSize = Number(tick.pip_size ?? (api_base as any).pip_sizes?.[sym]);
-                const priceStr = formatQuote(tick.quote, pipSize);
-                const d        = getLastDigit(priceStr);
-                if (d === null) return;
-                latestDigitRef.current = d;
-                lastTickAtRef.current = Date.now();
-                setCurrentDigit(d);
-                setCursorTick(prev => prev + 1);
-                setDigits(prev  => {
-                    const n = [...prev, d];
-                    const next = n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n;
-                    return next;
-                });
-                setDigitWindow(prev => {
-                    const next = [...prev, d];
-                    const bounded = next.length > DIGIT_WINDOW ? next.slice(-DIGIT_WINDOW) : next;
-                    digitWindowRef.current = bounded;
-                    return bounded;
-                });
-                setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
-
-                // Entry-point trigger (only active while engine is running)
-                const e = eng.current;
-                if (e.running && e.useEntryMode && e.waitingForEntry && !e.roundInFlight) {
-                    const selectedStrategy = e.strategyId === 'dual' ? null : STRATEGY_DEFINITIONS[e.strategyId];
-                    // Include the current tick and read from a ref so this
-                    // long-lived subscription never evaluates a stale window.
-                    const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
-                    digitWindowRef.current = nextWindow;
-                    const recentDigits = nextWindow.slice(-6);
-                    const dualSignal = !selectedStrategy
-                        ? evaluateDualGroupSignal(nextWindow, confidenceThresholdValue)
-                        : null;
-                    const hasDualEntryPair =
-                        recentDigits.length >= 2 &&
-                        ((recentDigits[recentDigits.length - 2] === 4 && recentDigits[recentDigits.length - 1] === 5) ||
-                            (recentDigits[recentDigits.length - 2] === 5 && recentDigits[recentDigits.length - 1] === 4));
-                    const useDualPairTrigger = !selectedStrategy && entryTriggerModeRef.current === 'pair';
-
-                    if (selectedStrategy) {
-                        const strategyEntryDigits = getStrategyEntryDigits(e.strategyId);
-                        if (e.strategyId !== 'over1' && e.strategyId !== 'under8' && isCautionCluster(selectedStrategy, recentDigits)) {
-                            setLastSkipReason(`Skipped ${selectedStrategy.label}: caution cluster detected (${selectedStrategy.cautionDigits.join(', ')})`);
-                            setIsWaitingEntry(true);
-                            return;
-                        }
-
-                        const sequenceMatched = matchesStrategyEntrySequence(e.strategyId, recentDigits);
-                        const shouldTrigger = e.strategyId === 'over1' || e.strategyId === 'over2' || e.strategyId === 'under8' || e.strategyId === 'under7' || e.strategyId === 'even' || e.strategyId === 'odd'
-                            ? sequenceMatched
-                            : strategyEntryDigits.includes(d);
-
-                        if (shouldTrigger) {
-                            e.waitingForEntry = false;
-                            e.entryDigit      = d;
-                            setLastEntryDigit(d);
-                            setLastSkipReason(null);
-                            setIsWaitingEntry(false);
-                            fireRoundRef.current();
-                        } else {
-                            setLastSkipReason(
-                                e.strategyId === 'over1'
-                                    ? `Waiting for Over 1 entry sequence: 3 digits from 0–2, then 3–7 — got ${d}`
-                                    : e.strategyId === 'over2'
-                                        ? `Waiting for Over 2 entry sequence: 0, 1, or 2 → 3, 4, 5, or 6 — got ${d}`
-                                        : e.strategyId === 'under8'
-                                            ? `Waiting for Under 8 entry sequence: 3 digits from 7–9, then 3–7 — got ${d}`
-                                            : e.strategyId === 'under7'
-                                                ? `Waiting for Under 7 entry sequence: 7, 8, or 9 → 3, 6, 7, 8, or 9 — got ${d}`
-                                                            : e.strategyId === 'even'
-                                                                ? `Waiting for Even entry sequence: odd, odd, odd, skip, even — got ${d}`
-                                                                : e.strategyId === 'odd'
-                                                                    ? `Waiting for Odd entry sequence: even, even, even, skip, odd — got ${d}`
-                                                                    : `Waiting for ${selectedStrategy.label} entry trigger — got ${d}`
-                            );
-                        }
-                        return;
-                    }
-
-                    if (dualSignal) {
-                        setLastSignalConfidence(dualSignal.confidence);
-                        if (dualSignal.shouldTrade) {
-                            e.waitingForEntry = false;
-                            e.entryDigit      = d;
-                            setLastEntryDigit(d);
-                            setLastSkipReason(null);
-                            setIsWaitingEntry(false);
-                            setStatusMsg(`Signal confidence ${dualSignal.confidence.toFixed(1)}% — executing dual Over 5 / Under 4 pair.`);
-                            fireRoundRef.current();
-                            return;
-                        }
-
-                        setLastSkipReason(
-                            dualSignal.middleDominant20 || dualSignal.middleDominant10
-                                ? `No trade — digits 4 and 5 are dominating the market (Middle ${dualSignal.middle}/20, recent ${dualSignal.recentMiddle}/10).`
-                                : `Waiting for strong extreme-group dominance: Under 4 ${dualSignal.under4}/20, Middle ${dualSignal.middle}/20, Over 5 ${dualSignal.over5}/20, confidence ${dualSignal.confidence.toFixed(1)}%.`
-                        );
-                        return;
-                    }
-
-                    if (useDualPairTrigger ? hasDualEntryPair : ENTRY_DIGITS.has(d)) {
-                        e.waitingForEntry = false;
-                        e.entryDigit      = d;
-                        setLastEntryDigit(d);
-                        setLastSkipReason(null);
-                        setIsWaitingEntry(false);
-                        fireRoundRef.current();
-                        return;
-                    }
-
-                    if (ENTRY_DIGITS.has(d)) {
-                        setLastSkipReason(
-                            useDualPairTrigger
-                                ? 'Waiting for the 4/5 pair to confirm the dual Over 5 / Under 4 entry.'
-                                : 'Waiting for the next 4 or 5 trigger for the dual Over 5 / Under 4 entry.'
-                        );
-                    }
-                }
-            }
-        });
 
         try {
             const r = await (api_base.api as any).send({ ticks: sym, subscribe: 1 });
@@ -967,7 +940,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                         ? '👀 Watching for Odd sequence: even, even, even, skip, odd…'
                                         : `👀 Watching for ${resolvedStrategy.label} trigger ${getStrategyEntryDigits(strategyId).join(', ')}…`)
             : entryMode
-                ? (entryTriggerMode === 'pair' ? '👀 Waiting for 4/5 pair to confirm entry…' : '👀 Waiting for a 4 or 5 trigger…')
+                ? '👀 Waiting for a 4 or 5 trigger…'
                 : 'Connecting…';
         setStatusMsg(statusStart);
 
@@ -1011,18 +984,12 @@ const OverUnderEngine: React.FC = observer(() => {
                 const selectedStrategy = activeStrategyId === 'dual' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
                 const recentDigits = digitWindowRef.current.slice(-6);
                 const latestDigit = recentDigits[recentDigits.length - 1];
-                const hasDualEntryPair =
-                    recentDigits.length >= 2 &&
-                    ((recentDigits[recentDigits.length - 2] === 4 && latestDigit === 5) ||
-                        (recentDigits[recentDigits.length - 2] === 5 && latestDigit === 4));
                 const shouldTrigger = selectedStrategy
                     ? (activeStrategyId === 'over1' || !isCautionCluster(selectedStrategy, recentDigits)) &&
                         (['over1', 'over2', 'under8', 'under7', 'even', 'odd'].includes(activeStrategyId)
                             ? matchesStrategyEntrySequence(activeStrategyId, recentDigits)
                             : getStrategyEntryDigits(activeStrategyId).includes(latestDigit))
-                    : entryTriggerModeRef.current === 'pair'
-                        ? hasDualEntryPair
-                        : ENTRY_DIGITS.has(latestDigit);
+                    : ENTRY_DIGITS.has(latestDigit);
 
                 if (shouldTrigger && latestDigit !== undefined) {
                     eng.current.waitingForEntry = false;
@@ -1037,7 +1004,7 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
-    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, entryTriggerMode, strategyId, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
+    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, strategyId, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
 
     // Start passive ticks whenever the selected symbol changes (or on first
     // mount). The engine can render before authentication finishes, so retry
@@ -1208,9 +1175,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                                             : strategyId === 'odd'
                                                                 ? <>Entry: <strong>even, even, even, skip, odd</strong></>
                                                                 : <>Entry: <strong>{getStrategyEntryDigits(strategyId).join(', ')}</strong></>
-                                : entryTriggerMode === 'pair'
-                                    ? <>Entry: <strong>4/5</strong> pair</>
-                                    : <>Entry: <strong>4</strong> or <strong>5</strong></>}
+                                : <>Entry: <strong>4</strong> or <strong>5</strong></>}
                             {isWaitingEntry && <span className='oue__entry-pulse' />}
                         </span>
                     )}
@@ -1311,7 +1276,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                     aria-current={isCurrent ? 'true' : undefined}
                                     aria-label={`Digit ${digit}: ${digitPercentages[digit].toFixed(1)} percent, ${count} ticks${isCurrent ? ', latest generated digit' : ''}`}
                                 >
-                                    {isCurrent && <span className='oue__course-cursor' key={cursorTick} aria-hidden='true'>▼</span>}
+                                    {isCurrent && <span className='oue__course-cursor' aria-hidden='true'>▼</span>}
                                     <span className='oue__course-digit-value'>{digit}</span>
                                     <span className='oue__course-digit-percent'>{digitPercentages[digit].toFixed(1)}%</span>
                                     <span className='oue__course-digit-count'>{count}</span>
@@ -1326,6 +1291,11 @@ const OverUnderEngine: React.FC = observer(() => {
                     {entryMode && <><span className='oue__legend-dot oue__legend-dot--entry'/>Entry (4–5)</>}
                     <span className='oue__legend-dot oue__legend-dot--neutral'/>Neutral
                     <span className='oue__legend-dot oue__legend-dot--under'/>Under 4 (0–3)
+                </div>
+
+                <div className='oue__latest-digit' aria-live='polite'>
+                    <span className='oue__latest-digit-label'>Latest digit</span>
+                    <strong>{currentDigit ?? '—'}</strong>
                 </div>
 
                 {/* waiting-for-entry status */}
@@ -1346,9 +1316,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                                     : strategyId === 'odd'
                                                         ? <>Watching for the sequence <strong>even, even, even, skip, odd</strong> before the next Odd trade…</>
                                                         : `Watching for ${activeStrategyDef?.label} trigger digit${getStrategyEntryDigits(strategyId).length > 1 ? 's' : ''} ${getStrategyEntryDigits(strategyId).join(', ')}…`
-                            : entryTriggerMode === 'pair'
-                                ? <>Waiting for the <strong>4/5</strong> pair before triggering the next trade…</>
-                                : <>Watching for digit <strong>4</strong> or <strong>5</strong> to trigger next trade…</>}
+                            : <>Watching for digit <strong>4</strong> or <strong>5</strong> to trigger next trade…</>}
                         {lastEntryDigit !== null && (
                             <span className='oue__entry-last'>Last entry: <strong>{lastEntryDigit}</strong></span>
                         )}
@@ -1622,27 +1590,6 @@ const OverUnderEngine: React.FC = observer(() => {
                         <div className='oue__toggle-thumb' />
                     </div>
                 </label>
-
-                {entryMode && !isSingleStrategyMode && (
-                    <div className='oue__entry-button-group'>
-                        <button
-                            type='button'
-                            className={`oue__entry-button${entryTriggerMode === 'single' ? ' oue__entry-button--active' : ''}`}
-                            onClick={() => !isRunning && setEntryTriggerMode('single')}
-                            disabled={isRunning}
-                        >
-                            4 / 5
-                        </button>
-                        <button
-                            type='button'
-                            className={`oue__entry-button${entryTriggerMode === 'pair' ? ' oue__entry-button--active' : ''}`}
-                            onClick={() => !isRunning && setEntryTriggerMode('pair')}
-                            disabled={isRunning}
-                        >
-                            4 / 5 Pair
-                        </button>
-                    </div>
-                )}
 
                 <div className='oue__action'>
                     <div className={`oue__status${isRunning ? ' oue__status--running' : ''}`}>
