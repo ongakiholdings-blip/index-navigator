@@ -46,6 +46,7 @@ export default class RunPanelStore {
             run_id: observable,
             error_type: observable,
             show_bot_stop_message: observable,
+            ai_bot_stop_handler: observable,
             is_stop_button_visible: computed,
             is_stop_button_disabled: computed,
             is_clear_stat_disabled: computed,
@@ -58,6 +59,8 @@ export default class RunPanelStore {
             is_contract_buying_in_progress: observable,
             SetpurchaseInProgress: action,
             onStopButtonClick: action,
+            registerAiBotStopHandler: action,
+            unregisterAiBotStopHandler: action,
             onClearStatClick: action,
             clearStat: action,
             toggleStatisticsInfoModal: action,
@@ -109,6 +112,10 @@ export default class RunPanelStore {
     is_sell_requested = false;
     show_bot_stop_message = false;
     is_contract_buying_in_progress = false;
+    // Registered by the AI Bots (Over/Under) engine only while its tab is
+    // mounted — lets the shared Stop button (Transactions panel / toolbar)
+    // stop that engine too, without affecting Bot Builder or other tabs.
+    ai_bot_stop_handler: (() => void) | null = null;
 
     run_id = '';
     onOkButtonClick: (() => void) | null = null;
@@ -243,10 +250,31 @@ export default class RunPanelStore {
         }
     };
 
+    // Registered by the AI Bots (Over/Under) engine only while its tab is
+    // mounted, so the shared Stop button below can also stop that engine
+    // without affecting Bot Builder / DBot or any other tab.
+    registerAiBotStopHandler = (handler: () => void) => {
+        this.ai_bot_stop_handler = handler;
+    };
+
+    unregisterAiBotStopHandler = () => {
+        this.ai_bot_stop_handler = null;
+    };
+
     stopBot = () => {
         const { ui } = this.core;
 
         this.dbot.stopBot();
+
+        // Stop the AI Bots (Over/Under) engine too, if it registered a handler
+        // (only happens while the AI Bots tab is mounted/active).
+        if (this.ai_bot_stop_handler) {
+            try {
+                this.ai_bot_stop_handler();
+            } catch {
+                // ignore — never let AI-bot cleanup break the standard stop flow
+            }
+        }
 
         ui.setPromptHandler(false);
 

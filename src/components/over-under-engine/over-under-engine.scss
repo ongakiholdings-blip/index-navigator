@@ -435,6 +435,53 @@
     }
 }
 
+.oue__strategy-card--hot .oue__strategy-card-hot {
+    position: absolute;
+    z-index: 3;
+    top: 0.55rem;
+    right: 0.55rem;
+    padding: 0.42rem 0.7rem;
+    border: 1px solid rgb(255 255 255 / 75%);
+    border-radius: 999px;
+    background: linear-gradient(135deg, #dc2626, #f97316);
+    box-shadow:
+        0 0 0 0 rgb(249 115 22 / 55%),
+        0 4px 14px rgb(127 29 29 / 45%),
+        inset 0 1px 0 rgb(255 255 255 / 55%);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    animation: oue-hot-live 1.6s ease-in-out infinite;
+    transform-origin: center;
+}
+
+@keyframes oue-hot-live {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 0 rgb(249 115 22 / 55%),
+            0 4px 14px rgb(127 29 29 / 45%),
+            inset 0 1px 0 rgb(255 255 255 / 55%);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 0.35rem rgb(249 115 22 / 0%),
+            0 5px 18px rgb(127 29 29 / 60%),
+            inset 0 1px 0 rgb(255 255 255 / 70%);
+        transform: scale(1.06);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .oue__strategy-card--hot .oue__strategy-card-hot {
+        animation: none;
+    }
+}
+
 .oue__strategy-card-badge {
     position: relative;
     z-index: 2;

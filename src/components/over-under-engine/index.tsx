@@ -220,6 +220,9 @@ interface EngineState {
     useEntryMode:         boolean;
     waitingForEntry:      boolean;
     entryDigit:           number | null;
+    // hidden power-engine trigger (Over 5 / Under 4 card only) — see startEngine
+    powerEngineActive:    boolean;
+    powerAwaitingTrigger: boolean;
     // per-round profit tracking
     currentRoundOverStake:  number;
     currentRoundUnderStake: number;
@@ -267,6 +270,8 @@ function makeInitState(
         useEntryMode: useEntry,
         waitingForEntry: useEntry,
         entryDigit: null,
+        powerEngineActive: false,
+        powerAwaitingTrigger: false,
         currentRoundOverStake: stake,
         currentRoundUnderStake: stake,
         overRoundProfit: null,
@@ -296,6 +301,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const [symbol, setSymbol]         = useState('1HZ10V');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(false);
+    const [powerEngineEnabled, setPowerEngineEnabled] = useState(false);
     const [lastSignalConfidence, setLastSignalConfidence] = useState<number | null>(null);
     // AI strategy engine — 'dual' keeps the original Over 5 / Under 4 pair,
     // any other value runs a single-leg strategy using the recommendations
@@ -350,6 +356,10 @@ const OverUnderEngine: React.FC = observer(() => {
     // arrived — signals that the next resolved ID must be immediately forgotten.
     const pendingForget    = useRef<boolean>(false);
     const fireRoundRef     = useRef<() => void>(() => {});
+    // Tracks the current position in MARKETS while the engine auto-cycles
+    // through every market — one trade per market, then rotates to the next.
+    const marketCycleIndexRef   = useRef(0);
+    const advanceMarketCycleRef = useRef<() => void>(() => {});
     const symbolRef        = useRef(symbol);
     const digitWindowRef   = useRef<number[]>([]);
     const subscriptionGenerationRef = useRef(0);
@@ -649,17 +659,23 @@ const OverUnderEngine: React.FC = observer(() => {
         e.strategyId = nextStrategy;
         e.entryDigit = null;
         setLastEntryDigit(null);
+        // Hidden power-engine trigger only ever applies to the Over 5 / Under 4
+        // card — recompute it here too, in case the strategy is switched live
+        // while the engine is already running.
+        const usePowerEngineNow = nextStrategy === 'dual' && powerEngineEnabled;
+        e.powerEngineActive = usePowerEngineNow;
+        e.powerAwaitingTrigger = usePowerEngineNow;
         if (e.running) {
-            e.waitingForEntry = e.useEntryMode;
-            setIsWaitingEntry(e.useEntryMode);
+            e.waitingForEntry = e.useEntryMode && !usePowerEngineNow;
+            setIsWaitingEntry(e.useEntryMode && !usePowerEngineNow);
             setLastSkipReason(null);
             setStatusMsg(
-                e.useEntryMode
+                e.useEntryMode && !usePowerEngineNow
                     ? `👀 Switched to ${nextStrategy === 'dual' ? 'Dual Over 5 / Under 4' : STRATEGY_DEFINITIONS[nextStrategy].label} — waiting for a fresh entry trigger…`
                     : `⚡ Switched to ${nextStrategy === 'dual' ? 'Dual Over 5 / Under 4' : STRATEGY_DEFINITIONS[nextStrategy].label}`
             );
         }
-    }, []);
+    }, [powerEngineEnabled]);
 
     const goBackToStrategies = useCallback(() => {
         if (eng.current.running) stopEngine('Strategy selection reopened');
@@ -731,13 +747,28 @@ const OverUnderEngine: React.FC = observer(() => {
 
             if (checkLimits() || !e.running) return;
 
+            if (e.powerEngineActive) {
+                // Power engine already rotated to the next market the instant
+                // the trade was fired — just report the round result and keep
+                // waiting for the next digit-5 trigger (handled by the tick
+                // listener), without advancing the market again or auto-firing.
+                const sign = roundPnl >= 0 ? '+' : '';
+                setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
+                return;
+            }
+
+            // One trade per market: rotate to the next market in MARKETS before
+            // the next round fires (or before entry-mode starts watching again).
+            advanceMarketCycleRef.current();
+            const nextMarketShort = MARKETS[marketCycleIndexRef.current]?.short ?? symbolRef.current;
+
             if (e.useEntryMode) {
                 e.waitingForEntry = true;
                 setIsWaitingEntry(true);
-                setStatusMsg('Round complete — waiting for the next entry condition…');
+                setStatusMsg(`Round complete — cycling to ${nextMarketShort} and waiting for the next entry condition…`);
             } else {
                 const sign = roundPnl >= 0 ? '+' : '';
-                setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
+                setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)} — next: ${nextMarketShort}`);
                 setTimeout(() => { if (eng.current.running) fireRoundRef.current(); }, 1500);
             }
         }
@@ -783,6 +814,22 @@ const OverUnderEngine: React.FC = observer(() => {
                     return bounded;
                 });
                 setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
+
+                // Hidden power-engine trigger (Over 5 / Under 4 card only, when
+                // the Entry Point Power Engine toggle is on): fire a trade the
+                // moment digit 5 appears, then immediately rotate to the next
+                // market and wait for digit 5 to appear again there. This is
+                // intentionally not surfaced in any UI/status text.
+                if (eng.current.running && eng.current.powerEngineActive) {
+                    if (eng.current.powerAwaitingTrigger && !eng.current.roundInFlight && d === 5) {
+                        eng.current.powerAwaitingTrigger = false;
+                        fireRoundRef.current();
+                        advanceMarketCycleRef.current();
+                        eng.current.powerAwaitingTrigger = true;
+                    }
+                    return;
+                }
+
                 if (eng.current.running && eng.current.useEntryMode && eng.current.waitingForEntry && !eng.current.roundInFlight) {
                     const selectedStrategy = eng.current.strategyId === 'dual' || eng.current.strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[eng.current.strategyId];
                     const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
@@ -936,6 +983,21 @@ const OverUnderEngine: React.FC = observer(() => {
         }
     }, [stopPassiveSub]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // ── market cycling: one trade per market, then rotate to the next ────────
+    // Every card now trades all markets in MARKETS instead of a single manually
+    // chosen symbol — one trade per market per lap, looping continuously until
+    // the take-profit/stop-loss threshold stops the engine (see checkLimits).
+
+    const advanceMarketCycle = useCallback(() => {
+        marketCycleIndexRef.current = (marketCycleIndexRef.current + 1) % MARKETS.length;
+        const nextMarket = MARKETS[marketCycleIndexRef.current];
+        symbolRef.current = nextMarket.symbol;
+        setSymbol(nextMarket.symbol);
+        startPassiveSub(nextMarket.symbol, true);
+    }, [startPassiveSub]);
+
+    useEffect(() => { advanceMarketCycleRef.current = advanceMarketCycle; }, [advanceMarketCycle]);
+
     // ── start ─────────────────────────────────────────────────────────────────
 
     const startEngine = useCallback(async () => {
@@ -950,13 +1012,26 @@ const OverUnderEngine: React.FC = observer(() => {
         }
         if (!api_base.api) { setStatusMsg('⚠ Not connected — please log in first'); return; }
 
+        // Every run starts the market cycle fresh from the first market in
+        // MARKETS — one trade per market, then rotates through the rest.
+        marketCycleIndexRef.current = 0;
+        symbolRef.current = MARKETS[0].symbol;
+        setSymbol(MARKETS[0].symbol);
+
         const resolvedStrategy = strategyId === 'dual' || strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[strategyId];
+        // Hidden power-engine trigger: Over 5 / Under 4 card only. When active,
+        // it replaces the visible entry-mode logic for this run — trades fire
+        // only when digit 5 appears, and the market switches immediately after
+        // each trade so it waits for digit 5 again on the next market.
+        const usePowerEngine = strategyId === 'dual' && powerEngineEnabled;
         // Risk controls always come from the values entered in the active form.
         // Strategy recommendations are informational and must not replace them.
         eng.current = makeInitState(stakeValue, martingaleValue, takeProfitValue, stopLossValue, entryMode, strategyId, martingaleEnabled);
         eng.current.running = true;
         eng.current.useEntryMode = entryMode;
         eng.current.waitingForEntry = entryMode;
+        eng.current.powerEngineActive = usePowerEngine;
+        eng.current.powerAwaitingTrigger = usePowerEngine;
         if (resolvedStrategy) {
             eng.current.baseStake = stakeValue;
             eng.current.overStake = stakeValue;
@@ -977,7 +1052,7 @@ const OverUnderEngine: React.FC = observer(() => {
         setLastOverResult(null);
         setLastUnderResult(null);
         setLastEntryDigit(null);
-        setIsWaitingEntry(entryMode);
+        setIsWaitingEntry(entryMode && !usePowerEngine);
         const statusStart = resolvedStrategy
             ? (strategyId === 'over1'
                 ? '👀 Watching for 3 consecutive digits in the 0–2 bracket (any random order)…'
@@ -992,9 +1067,11 @@ const OverUnderEngine: React.FC = observer(() => {
                                     : strategyId === 'odd'
                                         ? '👀 Watching for Odd sequence: even, even, even, skip, odd…'
                                         : `👀 Watching for ${resolvedStrategy.label} trigger ${getStrategyEntryDigits(strategyId).join(', ')}…`)
-            : entryMode
-               ? '👀 Dual entry window: block if 4/5 >6 in 20 or >=3 in 5; trade only when 4/5 appears once in 5…'
-                : 'Connecting…';
+            : usePowerEngine
+                ? 'Connecting…'
+                : entryMode
+                    ? '👀 Dual entry window: block if 4/5 >6 in 20 or >=3 in 5; trade only when 4/5 appears once in 5…'
+                    : 'Connecting…';
         setStatusMsg(statusStart);
 
         // Mirror run-panel start: activate global running state, open drawer, disable account switching
@@ -1023,18 +1100,18 @@ const OverUnderEngine: React.FC = observer(() => {
         });
 
         try {
-            if (!entryMode) {
+            if (!entryMode && !usePowerEngine) {
                 setStatusMsg('Connected — firing first round…');
                 await fireRound();
             }
 
-            // Keep the existing passive tick history while ensuring the selected
-            // market subscription is live for the engine. This is intentionally
-            // started after the direct-start case so the engine does not wait for
-            // an entry trigger when entry point mode is off.
-            await startPassiveSub(symbolRef.current, false);
+            // Reset the tick history for the freshly cycled starting market and
+            // ensure its subscription is live for the engine. This is
+            // intentionally started after the direct-start case so the engine
+            // does not wait for an entry trigger when entry point mode is off.
+            await startPassiveSub(symbolRef.current, true);
 
-            if (!entryMode) {
+            if (!entryMode || usePowerEngine) {
                 return;
             }
 
@@ -1142,6 +1219,22 @@ const OverUnderEngine: React.FC = observer(() => {
         stopPassiveSub();
     }, [cleanupSubs, stopPassiveSub]);
 
+    // Register this engine's stop handler with the shared run-panel Stop
+    // button (Transactions panel / toolbar) so clicking Stop there also stops
+    // this engine. Registration only exists while this component is mounted,
+    // which only happens while the AI Bots tab is active — so this never
+    // affects Bot Builder or any other tab.
+    useEffect(() => {
+        (run_panel as any).registerAiBotStopHandler?.(() => {
+            if (eng.current.running) {
+                stopEngine('Stopped from Transactions panel');
+            }
+        });
+        return () => {
+            (run_panel as any).unregisterAiBotStopHandler?.();
+        };
+    }, [run_panel, stopEngine]);
+
     // ── render ────────────────────────────────────────────────────────────────
 
     const currency    = (client as any)?.currency || 'USD';
@@ -1172,12 +1265,15 @@ const OverUnderEngine: React.FC = observer(() => {
                         <button
                             type='button'
                             role='listitem'
-                            className='oue__strategy-card'
+                            className='oue__strategy-card oue__strategy-card--hot'
                             onClick={() => selectStrategy('dual')}
                         >
+                            <span className='oue__strategy-card-hot' aria-label='Hot advanced bot'>
+                                🔥 HOT
+                            </span>
                             <span className='oue__strategy-card-badge'>↕</span>
                             <span className='oue__strategy-card-content'>
-                                <span className='oue__strategy-card-title'>Dual Over / Under</span>
+                                <span className='oue__strategy-card-title'>Over 5 / Under 4</span>
                                 <span className='oue__strategy-card-meta'>OVER 5 + UNDER 4 · BALANCED</span>
                                 <span className='oue__strategy-card-description'>Trade both sides of the digit range with the original paired AI bot.</span>
                             </span>
@@ -1262,10 +1358,11 @@ const OverUnderEngine: React.FC = observer(() => {
                             onClick={openMarket}
                             disabled={isRunning}
                             type='button'
-                            title='Change market'
+                            title={isRunning ? 'Cycling through all markets — one trade per market' : 'Change market'}
                         >
+                            {isRunning && <span className='oue__entry-pulse' aria-hidden='true' />}
                             <span className='oue__market-trigger-short'>
-                                {MARKETS.find(m => m.symbol === symbol)?.short ?? symbol}
+                                {isRunning ? '🔄 ' : ''}{MARKETS.find(m => m.symbol === symbol)?.short ?? symbol}
                             </span>
                             <span className={`oue__market-chevron${marketOpen ? ' oue__market-chevron--open' : ''}`}>▼</span>
                         </button>
@@ -1623,6 +1720,28 @@ const OverUnderEngine: React.FC = observer(() => {
                         />
                     </label>
                 )}
+
+                <label className='oue__entry-toggle'>
+                    <span className='oue__entry-toggle-label'>
+                        Entry Point Power Engine
+                        <small className='oue__entry-toggle-hint'>Enable advanced entry-point controls</small>
+                    </span>
+                    <div
+                        className={`oue__toggle${powerEngineEnabled ? ' oue__toggle--on' : ''}`}
+                        onClick={() => !isRunning && setPowerEngineEnabled(value => !value)}
+                        role='switch'
+                        aria-checked={powerEngineEnabled}
+                        aria-disabled={isRunning}
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (!isRunning && (e.key === ' ' || e.key === 'Enter')) {
+                                setPowerEngineEnabled(value => !value);
+                            }
+                        }}
+                    >
+                        <div className='oue__toggle-thumb' />
+                    </div>
+                </label>
 
                 <div className='oue__action'>
                     <div className={`oue__status${isRunning ? ' oue__status--running' : ''}`}>
