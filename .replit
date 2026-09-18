@@ -46,6 +46,6 @@ publicDir = "dist"
 [userenv]
 
 [userenv.shared]
-NEXT_PUBLIC_DERIV_APP_ID = "33CgtWLy6MV5q6iYjy3Y4"
+NEXT_PUBLIC_DERIV_APP_ID = "34dW9DIkkb8AWcPRK27Mh"
 NEXT_PUBLIC_DERIV_ENV = "production"
 NEXT_PUBLIC_DERIV_APP_NAME = "FROSTYDBOT"
