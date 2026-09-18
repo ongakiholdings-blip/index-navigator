@@ -797,11 +797,19 @@ const OverUnderEngine: React.FC = observer(() => {
 
             if (e.powerEngineActive) {
                 // Power engine already rotated to the next market the instant
-                // the trade was fired — just report the round result and keep
-                // waiting for the next digit-5 trigger (handled by the tick
-                // listener), without advancing the market again or auto-firing.
+                // the trade was fired. If the market's most recent digit (from
+                // history load or a live tick received while the previous
+                // round was settling) is already 5, fire immediately instead
+                // of waiting indefinitely for a brand new tick — this closes
+                // the loop so the engine keeps trading on every market switch.
                 const sign = roundPnl >= 0 ? '+' : '';
                 setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
+                if (e.powerAwaitingTrigger && latestDigitRef.current === 5) {
+                    e.powerAwaitingTrigger = false;
+                    fireRoundRef.current();
+                    advanceMarketCycleRef.current();
+                    e.powerAwaitingTrigger = true;
+                }
                 return;
             }
 
@@ -1004,6 +1012,46 @@ const OverUnderEngine: React.FC = observer(() => {
                 latestDigitRef.current = latestHistoryDigit ?? null;
                 lastTickAtRef.current = Date.now();
             }
+
+            // Evaluate the freshly loaded history immediately against the
+            // active entry logic. This runs every time a market is (re)loaded
+            // — on first start AND every subsequent market-cycle switch — so
+            // a trigger that's already present in the just-fetched history
+            // (e.g. digit 5 for the hidden power engine, or 4/5 for the
+            // visible entry mode) is never missed while waiting for a brand
+            // new live tick to arrive.
+            if (latestHistoryDigit !== undefined && eng.current.running && !eng.current.roundInFlight) {
+                if (eng.current.powerEngineActive) {
+                    if (eng.current.powerAwaitingTrigger && latestHistoryDigit === 5) {
+                        eng.current.powerAwaitingTrigger = false;
+                        fireRoundRef.current();
+                        advanceMarketCycleRef.current();
+                        eng.current.powerAwaitingTrigger = true;
+                    }
+                } else if (eng.current.useEntryMode && eng.current.waitingForEntry) {
+                    const activeStrategyId = eng.current.strategyId;
+                    const selectedStrategy = activeStrategyId === 'dual' || activeStrategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
+                    const recentDigits = nextWindow.slice(-6);
+                    const shouldTrigger = selectedStrategy
+                        ? (activeStrategyId === 'over1' || !isCautionCluster(selectedStrategy, recentDigits)) &&
+                            (['over1', 'over2', 'under8', 'under7', 'even', 'odd'].includes(activeStrategyId)
+                                ? matchesStrategyEntrySequence(activeStrategyId, recentDigits)
+                                : getStrategyEntryDigits(activeStrategyId).includes(latestHistoryDigit))
+                        : (activeStrategyId === 'confidence'
+                            ? evaluateConfidenceGateSignal(nextWindow).shouldTrade
+                            : ENTRY_DIGITS.has(latestHistoryDigit));
+
+                    if (shouldTrigger) {
+                        eng.current.waitingForEntry = false;
+                        eng.current.entryDigit = latestHistoryDigit;
+                        setLastEntryDigit(latestHistoryDigit);
+                        setLastSkipReason(null);
+                        setIsWaitingEntry(false);
+                        setStatusMsg('Entry condition ready — firing round…');
+                        fireRoundRef.current();
+                    }
+                }
+            }
         }
 
         try {
@@ -1154,41 +1202,12 @@ const OverUnderEngine: React.FC = observer(() => {
             }
 
             // Reset the tick history for the freshly cycled starting market and
-            // ensure its subscription is live for the engine. This is
-            // intentionally started after the direct-start case so the engine
-            // does not wait for an entry trigger when entry point mode is off.
+            // ensure its subscription is live for the engine. startPassiveSub
+            // itself evaluates the loaded history against the active entry
+            // logic (entry mode or the hidden power engine) and fires
+            // immediately if a trigger is already present, so no separate
+            // follow-up check is needed here.
             await startPassiveSub(symbolRef.current, true);
-
-            if (!entryMode || usePowerEngine) {
-                return;
-            }
-
-            if (digitWindowRef.current.length > 0) {
-                // Evaluate loaded history immediately when entry mode starts,
-                // so a ready condition is not missed until the next tick.
-                const activeStrategyId = eng.current.strategyId;
-                const selectedStrategy = activeStrategyId === 'dual' || activeStrategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
-                const recentDigits = digitWindowRef.current.slice(-6);
-                const latestDigit = recentDigits[recentDigits.length - 1];
-                const shouldTrigger = selectedStrategy
-                    ? (activeStrategyId === 'over1' || !isCautionCluster(selectedStrategy, recentDigits)) &&
-                        (['over1', 'over2', 'under8', 'under7', 'even', 'odd'].includes(activeStrategyId)
-                            ? matchesStrategyEntrySequence(activeStrategyId, recentDigits)
-                            : getStrategyEntryDigits(activeStrategyId).includes(latestDigit))
-                    : (activeStrategyId === 'confidence'
-                        ? evaluateConfidenceGateSignal(digitWindowRef.current).shouldTrade
-                        : ENTRY_DIGITS.has(latestDigit));
-
-                if (shouldTrigger && latestDigit !== undefined) {
-                    eng.current.waitingForEntry = false;
-                    eng.current.entryDigit = latestDigit;
-                    setLastEntryDigit(latestDigit);
-                    setLastSkipReason(null);
-                    setIsWaitingEntry(false);
-                    setStatusMsg('Entry condition ready — firing round…');
-                    await fireRound();
-                }
-            }
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
