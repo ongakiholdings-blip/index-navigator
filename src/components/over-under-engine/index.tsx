@@ -228,6 +228,10 @@ interface EngineState {
     currentRoundUnderStake: number;
     overRoundProfit:        number | null;
     underRoundProfit:       number | null;
+    // dual (Over 5 / Under 4) martingale: only escalates when BOTH legs lose
+    // in the same round — tracked per round, applied once at round-complete.
+    overRoundAnyWin:        boolean;
+    underRoundAnyWin:       boolean;
     roundCounter:           number;
     // AI strategy engine
     strategyId:             StrategyId;
@@ -276,6 +280,8 @@ function makeInitState(
         currentRoundUnderStake: stake,
         overRoundProfit: null,
         underRoundProfit: null,
+        overRoundAnyWin: false,
+        underRoundAnyWin: false,
         roundCounter: 0,
         strategyId,
         consecutiveLosses: 0,
@@ -509,6 +515,8 @@ const OverUnderEngine: React.FC = observer(() => {
         e.underSettled  = selectedStrategy ? true : false;
         e.overRoundProfit  = null;
         e.underRoundProfit = null;
+        e.overRoundAnyWin  = false;
+        e.underRoundAnyWin = false;
         e.currentRoundOverStake  = e.overStake;
         e.currentRoundUnderStake = e.underStake;
 
@@ -697,14 +705,28 @@ const OverUnderEngine: React.FC = observer(() => {
         e.totalProfit = round2(e.totalProfit + profit);
         setTotalProfit(e.totalProfit);
 
+        // For the dual (Over 5 / Under 4) strategy, the next-round stake is
+        // decided once per round (see round-complete below) so martingale only
+        // escalates when BOTH legs lose together — per-contract stake updates
+        // are skipped here for that strategy.
+        const isDualStake = e.strategyId === 'dual';
+
         if (isOver) {
             e.overSettledIds = [...e.overSettledIds, contractId];
             e.overRoundProfit = (e.overRoundProfit ?? 0) + profit;
-            if (won) { e.overWins++;   e.overStake = e.baseStake;                setLastOverResult('won'); }
-            else     { e.overLosses++; e.overStake = e.martingaleEnabled ? round2(e.overStake * e.martingale) : e.baseStake; setLastOverResult('lost'); }
+            if (won) {
+                e.overWins++;
+                if (!isDualStake) e.overStake = e.baseStake;
+                e.overRoundAnyWin = true;
+                setLastOverResult('won');
+            } else {
+                e.overLosses++;
+                if (!isDualStake) e.overStake = e.martingaleEnabled ? round2(e.overStake * e.martingale) : e.baseStake;
+                setLastOverResult('lost');
+            }
             setOverWins(e.overWins);
             setOverLosses(e.overLosses);
-            setOverCurrentStake(e.overStake);
+            if (!isDualStake) setOverCurrentStake(e.overStake);
             if (e.overContractIds.length > 0 && e.overContractIds.every(id => e.overSettledIds.includes(id))) {
                 e.overSettled = true;
             }
@@ -713,11 +735,19 @@ const OverUnderEngine: React.FC = observer(() => {
         if (isUnder) {
             e.underSettledIds = [...e.underSettledIds, contractId];
             e.underRoundProfit = (e.underRoundProfit ?? 0) + profit;
-            if (won) { e.underWins++;   e.underStake = e.baseStake;                   setLastUnderResult('won'); }
-            else     { e.underLosses++; e.underStake = e.martingaleEnabled ? round2(e.underStake * e.martingale) : e.baseStake; setLastUnderResult('lost'); }
+            if (won) {
+                e.underWins++;
+                if (!isDualStake) e.underStake = e.baseStake;
+                e.underRoundAnyWin = true;
+                setLastUnderResult('won');
+            } else {
+                e.underLosses++;
+                if (!isDualStake) e.underStake = e.martingaleEnabled ? round2(e.underStake * e.martingale) : e.baseStake;
+                setLastUnderResult('lost');
+            }
             setUnderWins(e.underWins);
             setUnderLosses(e.underLosses);
-            setUnderCurrentStake(e.underStake);
+            if (!isDualStake) setUnderCurrentStake(e.underStake);
             if (e.underContractIds.length > 0 && e.underContractIds.every(id => e.underSettledIds.includes(id))) {
                 e.underSettled = true;
             }
@@ -741,6 +771,24 @@ const OverUnderEngine: React.FC = observer(() => {
             const overP   = e.overRoundProfit  ?? 0;
             const underP  = e.underRoundProfit ?? 0;
             const roundPnl = round2(overP + underP);
+
+            // Dual (Over 5 / Under 4) martingale: escalate the stake for the
+            // next round only when BOTH legs lost this round. If either leg
+            // won, both stakes reset to the base stake.
+            if (e.strategyId === 'dual') {
+                const overLegLost  = e.overContractIds.length  > 0 && !e.overRoundAnyWin;
+                const underLegLost = e.underContractIds.length > 0 && !e.underRoundAnyWin;
+                const bothLost = overLegLost && underLegLost;
+                if (bothLost && e.martingaleEnabled) {
+                    e.overStake  = round2(e.overStake  * e.martingale);
+                    e.underStake = round2(e.underStake * e.martingale);
+                } else {
+                    e.overStake  = e.baseStake;
+                    e.underStake = e.baseStake;
+                }
+                setOverCurrentStake(e.overStake);
+                setUnderCurrentStake(e.underStake);
+            }
 
             e.roundInFlight = false;
             e.entryDigit    = null;
