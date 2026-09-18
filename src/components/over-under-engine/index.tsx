@@ -1192,7 +1192,7 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
-    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, strategyId, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
+    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, strategyId, powerEngineEnabled, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
 
     // Start passive ticks whenever the selected symbol changes (or on first
     // mount). The engine can render before authentication finishes, so retry
