@@ -628,10 +628,14 @@ const AppWrapper = observer(() => {
             </div>
             <DesktopWrapper>
                 {active_tab !== DBOT_TABS.DERIV_HOMES && (
-                    <div className='main__run-strategy-wrapper'>
-                        <RunStrategy />
-                        <RunPanel />
-                    </div>
+                    <React.Fragment>
+                        <div className='main__run-strategy-fixed'>
+                            <RunStrategy />
+                        </div>
+                        <div className='main__run-strategy-wrapper'>
+                            <RunPanel />
+                        </div>
+                    </React.Fragment>
                 )}
                 <ChartModal />
                 <TradingViewModal />

@@ -362,7 +362,8 @@
         position: sticky;
         transform: translateX(var(--translate-panel-ltr));
         transition: all 0.4s;
-        margin-top: 1rem;
+        /* Clears the navigation tab row so the panel never overlaps/hides tabs */
+        margin-top: 5rem;
 
         @include is-RTL {
             transform: translateX(var(--translate-panel-rtl));
