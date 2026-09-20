@@ -516,12 +516,6 @@ const AppWrapper = observer(() => {
                                 id='id-signal-zone'
                             >
                                 <div className='external-tab-frame'>
-                                    <div className='external-tab-frame__toolbar'>
-                                        <span><Localize i18n_default_text='Signal-Zone' /></span>
-                                        <a href='https://indexnavigator.vercel.app' target='_blank' rel='noreferrer'>
-                                            <Localize i18n_default_text='Open full screen' />
-                                        </a>
-                                    </div>
                                     <iframe
                                         src='https://indexnavigator.vercel.app/'
                                         title='Signal-Zone'
@@ -566,12 +560,6 @@ const AppWrapper = observer(() => {
                                 id='id-deriv-t-view'
                             >
                                 <div className='external-tab-frame'>
-                                    <div className='external-tab-frame__toolbar'>
-                                        <span><Localize i18n_default_text='Deriv-T.View' /></span>
-                                        <a href='https://charts.deriv.com/deriv' target='_blank' rel='noreferrer'>
-                                            <Localize i18n_default_text='Open full screen' />
-                                        </a>
-                                    </div>
                                     <iframe
                                         src='https://charts.deriv.com/deriv'
                                         title='Deriv-T.View'

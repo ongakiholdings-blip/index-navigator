@@ -4,9 +4,20 @@ import { load } from '@/external/bot-skeleton';
 import { save_types } from '@/external/bot-skeleton/constants/save-type';
 import { useStore } from '@/hooks/useStore';
 import { DBOT_TABS } from '@/constants/bot-contents';
-import { LabelPairedCircleStarCaptionBoldIcon } from '@deriv/quill-icons/LabelPaired';
 import { Localize } from '@deriv-com/translations';
 import './free-bots.scss';
+
+const BookmarkIcon = () => (
+    <svg viewBox='0 0 24 24' width='13' height='13' fill='none' stroke='currentColor' strokeWidth='2'>
+        <path d='M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z' strokeLinejoin='round' />
+    </svg>
+);
+
+const LoadBotIcon = () => (
+    <svg viewBox='0 0 24 24' width='13' height='13' fill='none' stroke='currentColor' strokeWidth='2'>
+        <path d='M12 3v12m0 0-4-4m4 4 4-4M4 21h16' strokeLinecap='round' strokeLinejoin='round' />
+    </svg>
+);
 
 type MiniTab = 'NORMAL' | 'PREMIUM' | 'CLASSICS';
 
@@ -40,12 +51,6 @@ type BotEntry = {
     description: string;
     tab: MiniTab;
     difficulty: string;
-};
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-    Beginner: '#10b981',
-    Intermediate: '#f59e0b',
-    Advanced: '#ef4444',
 };
 
 // ─── Add bots here ────────────────────────────────────────────────────────────
@@ -303,53 +308,31 @@ const FreeBots = observer(() => {
                 <div className='free-bots__grid'>
                     {visible_bots.map(bot => {
                         const is_loading = importing === bot.id;
-                        const cfg = TAB_CONFIG[bot.tab];
+                        const variant = bot.tab === 'PREMIUM' ? 'premium' : bot.tab === 'CLASSICS' ? 'classics' : 'normal-tab';
                         return (
-                            <div
-                                key={bot.id}
-                                className={`free-bots__card${bot.tab === 'PREMIUM' ? ' free-bots__card--premium' : bot.tab === 'CLASSICS' ? ' free-bots__card--classics' : ' free-bots__card--normal-tab'}`}
-                                style={{ '--card-border': cfg.cardBorder } as React.CSSProperties}
-                            >
-                                <div className='free-bots__card-icon-row'>
-                                    <div className='free-bots__card-icon'>
-                                        <LabelPairedCircleStarCaptionBoldIcon height='22px' width='22px' fill='#f7c53b' />
-                                    </div>
-                                    <span
-                                        className='free-bots__card-special-tag'
-                                        style={
-                                            bot.tab === 'PREMIUM'
-                                                ? { color: '#f7a800', background: 'rgb(247 168 0 / 12%)', borderColor: '#f7a80040' }
-                                                : bot.tab === 'CLASSICS'
-                                                ? { color: '#cd7f32', background: 'rgb(205 127 50 / 12%)', borderColor: '#cd7f3240' }
-                                                : { color: '#3b82f6', background: 'rgb(59 130 246 / 12%)', borderColor: '#3b82f640' }
-                                        }
-                                    >
-                                        <span>{cfg.badge}</span>
-                                        {bot.tab}
+                            <div key={bot.id} className={`free-bots__card free-bots__card--${variant}`}>
+                                <div className='free-bots__card-thumb'>
+                                    <span className='free-bots__card-thumb-tag'>{TAB_LABELS[bot.tab]}</span>
+                                    <span className='free-bots__card-thumb-action' aria-hidden='true'>
+                                        <BookmarkIcon />
                                     </span>
                                 </div>
                                 <div className='free-bots__card-body'>
-                                    <div className='free-bots__card-top'>
-                                        <span className='free-bots__card-category'>{bot.tab}</span>
-                                        <span
-                                            className='free-bots__card-difficulty'
-                                            style={{ color: DIFFICULTY_COLORS[bot.difficulty] }}
-                                        >
-                                            {bot.difficulty}
-                                        </span>
-                                    </div>
+                                    <span className='free-bots__card-access'>
+                                        <Localize i18n_default_text='Open Access' />
+                                    </span>
                                     <h3 className='free-bots__card-name'>{bot.name}</h3>
-                                    <p className='free-bots__card-description'>{bot.description}</p>
                                 </div>
                                 <button
-                                    className={`free-bots__card-btn${bot.tab === 'PREMIUM' ? ' free-bots__card-btn--premium' : bot.tab === 'CLASSICS' ? ' free-bots__card-btn--classics' : ' free-bots__card-btn--normal-tab'}${is_loading ? ' free-bots__card-btn--loading' : ''}`}
+                                    className={`free-bots__card-btn free-bots__card-btn--${variant}${is_loading ? ' free-bots__card-btn--loading' : ''}`}
                                     onClick={() => handleImport(bot)}
                                     disabled={is_loading}
                                 >
+                                    <LoadBotIcon />
                                     {is_loading ? (
                                         <Localize i18n_default_text='Importing…' />
                                     ) : (
-                                        <Localize i18n_default_text='LOAD BOT' />
+                                        <Localize i18n_default_text='Load bot' />
                                     )}
                                 </button>
                             </div>
