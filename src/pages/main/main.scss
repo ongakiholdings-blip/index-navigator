@@ -680,9 +680,18 @@
         inset-inline-end: 1.6rem;
         top: 1.6rem;
         z-index: 2;
+        /* Wrapper's own box can grow taller than its visible content (e.g. from a
+           child's margin-top used to clear the nav tabs), so ignore pointer events
+           on the wrapper itself and only re-enable them on the actual panel so the
+           empty space above the drawer never blocks clicks on the tabs behind it. */
+        pointer-events: none;
 
         @include desktop-screen {
             position: absolute;
+        }
+
+        > * {
+            pointer-events: auto;
         }
 
         .animation {
