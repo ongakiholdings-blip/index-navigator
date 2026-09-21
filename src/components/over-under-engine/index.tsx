@@ -321,16 +321,25 @@ const OverUnderEngine: React.FC = observer(() => {
     const [onlyUpsDownsSelected, setOnlyUpsDownsSelected] = useState(false);
     const [higherLowerSide, setHigherLowerSide] = useState<'higher' | 'lower' | 'both'>('higher');
     const [higherLowerStake, setHigherLowerStake] = useState('2');
-    const [higherLowerBarrier, setHigherLowerBarrier] = useState('0.5');
+    const [higherLowerBarrier, setHigherLowerBarrier] = useState('');
+    const [higherLowerBarrierStatus, setHigherLowerBarrierStatus] = useState('Loading market barrier…');
     const [higherLowerDuration, setHigherLowerDuration] = useState('5');
     const [higherLowerBulkEnabled, setHigherLowerBulkEnabled] = useState(false);
     const [higherLowerBulkCount, setHigherLowerBulkCount] = useState('3');
     const [higherLowerStatus, setHigherLowerStatus] = useState('Ready to buy');
+    const [higherLowerRunning, setHigherLowerRunning] = useState(false);
+    const [higherLowerTakeProfit, setHigherLowerTakeProfit] = useState('5');
+    const [higherLowerStopLoss, setHigherLowerStopLoss] = useState('5');
     const [onlyUpsDownsStake, setOnlyUpsDownsStake] = useState('2');
     const [onlyUpsDownsDuration, setOnlyUpsDownsDuration] = useState('2');
     const [onlyUpsDownsBulkEnabled, setOnlyUpsDownsBulkEnabled] = useState(false);
     const [onlyUpsDownsBulkCount, setOnlyUpsDownsBulkCount] = useState('3');
     const [onlyUpsDownsStatus, setOnlyUpsDownsStatus] = useState('Ready to buy');
+    const [onlyUpsDownsRunning, setOnlyUpsDownsRunning] = useState(false);
+    const [onlyUpsDownsTakeProfit, setOnlyUpsDownsTakeProfit] = useState('5');
+    const [onlyUpsDownsStopLoss, setOnlyUpsDownsStopLoss] = useState('5');
+    const higherLowerStopRef = useRef(false);
+    const onlyUpsDownsStopRef = useRef(false);
     const [singleWins, setSingleWins]     = useState(0);
     const [singleLosses, setSingleLosses] = useState(0);
     const [singleStake, setSingleStake]   = useState(0.5);
@@ -484,24 +493,149 @@ const OverUnderEngine: React.FC = observer(() => {
         (ui as any)?.setPromptHandler?.(false);
     }, [cleanupSubs, run_panel, ui]);
 
+    const getAutomaticHigherLowerBarrier = useCallback(async (symbol: string): Promise<string> => {
+        const response = await (api_base.api as any).send({ contracts_for: symbol });
+        const contracts = response?.contracts_for?.available;
+        if (!Array.isArray(contracts)) throw new Error('Deriv did not return barrier data for this market');
+
+        const higherLowerContracts = contracts.filter((contract: any) =>
+            ['CALL', 'PUT'].includes(contract?.contract_type) &&
+            (contract?.barrier !== undefined || contract?.high_barrier !== undefined || contract?.low_barrier !== undefined)
+        );
+        const contract = higherLowerContracts.find((item: any) => item?.contract_type === 'CALL') || higherLowerContracts[0];
+        const barrier = contract?.barrier ?? contract?.high_barrier ?? contract?.low_barrier;
+        if (barrier === undefined || barrier === null || barrier === '') {
+            throw new Error('No Higher/Lower barrier is available for this market');
+        }
+        return String(barrier);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        const symbol = chart_store.symbol;
+        if (!symbol) return () => { cancelled = true; };
+
+        setHigherLowerBarrierStatus('Loading market barrier…');
+        void getAutomaticHigherLowerBarrier(symbol)
+            .then(barrier => {
+                if (cancelled) return;
+                setHigherLowerBarrier(barrier);
+                setHigherLowerBarrierStatus(`Automatic barrier: ${barrier}`);
+            })
+            .catch(error => {
+                if (cancelled) return;
+                setHigherLowerBarrier('');
+                setHigherLowerBarrierStatus(error?.message || 'Barrier unavailable');
+            });
+
+        return () => { cancelled = true; };
+    }, [chart_store.symbol, getAutomaticHigherLowerBarrier]);
+
+    const runDirectionalTrading = useCallback(async ({
+        amount, duration, bulk, sides, barrier, takeProfit, stopLoss, setStatus, setRunning, stopRef, label,
+    }: {
+        amount: number; duration: number; bulk: number; sides: string[]; barrier?: string;
+        takeProfit: number; stopLoss: number; setStatus: (value: string) => void; label: string;
+        setRunning: (value: boolean) => void; stopRef: React.MutableRefObject<boolean>;
+    }) => {
+        const api = api_base.api as any;
+        if (!api) return;
+        stopRef.current = false;
+        let pnl = 0;
+        setRunning(true);
+        setStatus(`Running ${label}…`);
+        while (!stopRef.current) {
+            if ((takeProfit > 0 && pnl >= takeProfit) || (stopLoss > 0 && pnl <= -stopLoss)) break;
+            const requests = sides.flatMap(contractType => Array.from({ length: bulk }, () => ({
+                buy: '1',
+                price: amount,
+                parameters: {
+                    amount, basis: 'stake', contract_type: contractType,
+                    currency: (api_base as any).account_info?.currency || (client as any)?.currency || 'USD',
+                    duration, duration_unit: 't', ...(barrier ? { barrier } : {}),
+                    underlying_symbol: chart_store.symbol || '1HZ10V',
+                },
+            })));
+            try {
+                const responses = await Promise.all(requests.map(request => api.send(request)));
+                const contracts = responses.map(response => response?.buy?.contract_id).filter(Boolean);
+                if (!contracts.length) throw new Error('No contracts were purchased');
+                responses.forEach(response => {
+                    const buy = response?.buy;
+                    if (!buy?.contract_id) return;
+                    transactions.onBotContractEvent({
+                        ...buy,
+                        contract_id: buy.contract_id,
+                        contract_type: buy.contract_type,
+                        barrier: barrier ?? '',
+                        underlying_symbol: chart_store.symbol || '1HZ10V',
+                        currency: buy.currency ?? (api_base as any).account_info?.currency ?? 'USD',
+                        buy_price: buy.buy_price ?? amount,
+                        date_start: buy.date_start ?? buy.purchase_time ?? Math.floor(Date.now() / 1000),
+                        status: 'open',
+                        profit: 0,
+                        transaction_ids: {
+                            ...(buy.transaction_ids ?? {}),
+                            buy: buy.transaction_id ?? buy.transaction_ids?.buy ?? buy.contract_id,
+                        },
+                    } as any);
+                });
+                setStatus(`${label} running — ${contracts.length} contract(s) open | P&L ${pnl.toFixed(2)}`);
+                const results = await Promise.all(contracts.map(async (contractId: number) => {
+                    for (;;) {
+                        if (stopRef.current) return 0;
+                        const response = await api.send({ proposal_open_contract: 1, contract_id: contractId });
+                        const contract = response?.proposal_open_contract;
+                        if (contract?.is_sold || contract?.is_expired || ['won', 'lost', 'sold'].includes(contract?.status)) {
+                            return Number(contract.profit) || 0;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }));
+                pnl = round2(pnl + results.reduce((sum, value) => sum + value, 0));
+                setStatus(`${label} running — cumulative P&L ${pnl.toFixed(2)}`);
+            } catch (error: any) {
+                setStatus(error?.error?.message || error?.message || `${label} failed`);
+                setRunning(false);
+                return;
+            }
+        }
+        setRunning(false);
+        if (stopRef.current) setStatus(`${label} stopped manually — P&L ${pnl.toFixed(2)}`);
+        else if (takeProfit > 0 && pnl >= takeProfit) setStatus(`${label} take profit reached: ${pnl.toFixed(2)}`);
+        else if (stopLoss > 0 && pnl <= -stopLoss) setStatus(`${label} stop loss reached: ${pnl.toFixed(2)}`);
+        else setStatus(`${label} stopped — P&L ${pnl.toFixed(2)}`);
+    }, [chart_store.symbol, client, transactions]);
+
     const buyHigherLower = useCallback(async () => {
         const amount = Number(higherLowerStake);
         const duration = Number(higherLowerDuration);
-        const barrier = Number(higherLowerBarrier);
         const bulk = higherLowerBulkEnabled ? Number(higherLowerBulkCount) : 1;
+        const takeProfit = Number(higherLowerTakeProfit) || 0;
+        const stopLoss = Number(higherLowerStopLoss) || 0;
         if (!api_base.api) {
             setHigherLowerStatus('Not connected — please log in first');
             return;
         }
         if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(duration) || duration < 1 ||
-            !Number.isFinite(barrier) || !Number.isInteger(bulk) || bulk < 1) {
-            setHigherLowerStatus('Enter valid stake, barrier, duration, and bulk values');
+            !Number.isInteger(bulk) || bulk < 1) {
+            setHigherLowerStatus('Enter valid stake, duration, and bulk values');
             return;
         }
 
         const sides = higherLowerSide === 'both' ? ['CALL', 'PUT'] : [higherLowerSide === 'higher' ? 'CALL' : 'PUT'];
         const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
         const symbol = chart_store.symbol || '1HZ10V';
+        setHigherLowerStatus('Refreshing automatic market barrier…');
+        let barrier: string;
+        try {
+            barrier = await getAutomaticHigherLowerBarrier(symbol);
+            setHigherLowerBarrier(barrier);
+            setHigherLowerBarrierStatus(`Automatic barrier: ${barrier}`);
+        } catch (error: any) {
+            setHigherLowerStatus(error?.message || 'Unable to load the market barrier');
+            return;
+        }
         const requests = sides.flatMap(contractType =>
             Array.from({ length: bulk }, () => ({
                 buy: '1',
@@ -519,6 +653,13 @@ const OverUnderEngine: React.FC = observer(() => {
             }))
         );
 
+        void runDirectionalTrading({
+            amount, duration, bulk, sides, barrier, takeProfit, stopLoss, setRunning: setHigherLowerRunning,
+            stopRef: higherLowerStopRef,
+            setStatus: setHigherLowerStatus,
+            label: 'Higher/Lower',
+        });
+        return;
         setHigherLowerStatus(`Buying ${requests.length} contract${requests.length === 1 ? '' : 's'}…`);
         try {
             const responses = await Promise.all(requests.map(request => (api_base.api as any).send(request)));
@@ -546,12 +687,14 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (error: any) {
             setHigherLowerStatus(error?.error?.message || error?.message || 'Purchase failed');
         }
-    }, [chart_store.symbol, client, higherLowerBarrier, higherLowerBulkCount, higherLowerBulkEnabled, higherLowerDuration, higherLowerSide, higherLowerStake, transactions]);
+    }, [chart_store.symbol, client, getAutomaticHigherLowerBarrier, higherLowerBulkCount, higherLowerBulkEnabled, higherLowerDuration, higherLowerSide, higherLowerStake, higherLowerStopLoss, higherLowerTakeProfit, runDirectionalTrading, transactions]);
 
     const buyOnlyUpsDowns = useCallback(async () => {
         const amount = Number(onlyUpsDownsStake);
         const duration = Number(onlyUpsDownsDuration);
         const bulk = onlyUpsDownsBulkEnabled ? Number(onlyUpsDownsBulkCount) : 1;
+        const takeProfit = Number(onlyUpsDownsTakeProfit) || 0;
+        const stopLoss = Number(onlyUpsDownsStopLoss) || 0;
         if (!api_base.api) {
             setOnlyUpsDownsStatus('Not connected — please log in first');
             return;
@@ -562,9 +705,23 @@ const OverUnderEngine: React.FC = observer(() => {
             return;
         }
 
+        void runDirectionalTrading({
+            amount,
+            duration,
+            bulk,
+            sides: ['RUNHIGH', 'RUNLOW'],
+            takeProfit,
+            stopLoss,
+            setStatus: setOnlyUpsDownsStatus,
+            setRunning: setOnlyUpsDownsRunning,
+            stopRef: onlyUpsDownsStopRef,
+            label: 'Only Ups / Only Downs',
+        });
+        return;
+
         const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
         const symbol = chart_store.symbol || '1HZ10V';
-        const requests = ['CALL', 'PUT'].flatMap(contractType =>
+        const requests = ['RUNHIGH', 'RUNLOW'].flatMap(contractType =>
             Array.from({ length: bulk }, () => ({
                 buy: '1',
                 price: amount,
@@ -606,7 +763,7 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (error: any) {
             setOnlyUpsDownsStatus(error?.error?.message || error?.message || 'Purchase failed');
         }
-    }, [chart_store.symbol, client, onlyUpsDownsBulkCount, onlyUpsDownsBulkEnabled, onlyUpsDownsDuration, onlyUpsDownsStake, transactions]);
+    }, [chart_store.symbol, client, onlyUpsDownsBulkCount, onlyUpsDownsBulkEnabled, onlyUpsDownsDuration, onlyUpsDownsStake, onlyUpsDownsStopLoss, onlyUpsDownsTakeProfit, runDirectionalTrading, transactions]);
 
     // ── limits ────────────────────────────────────────────────────────────────
 
@@ -1520,8 +1677,8 @@ const OverUnderEngine: React.FC = observer(() => {
                             <span className='oue__strategy-card-badge'>↕</span>
                             <span className='oue__strategy-card-content'>
                                 <span className='oue__strategy-card-title'>ONLY UPS / ONLY DOWNS</span>
-                                <span className='oue__strategy-card-meta'>CALL + PUT · BOTH ONLY</span>
-                                <span className='oue__strategy-card-description'>Trade both upward and downward contracts together without a barrier.</span>
+                                <span className='oue__strategy-card-meta'>ONLY UPS + ONLY DOWNS · BOTH ONLY</span>
+                                <span className='oue__strategy-card-description'>Trade Only Ups and Only Downs contracts together without a barrier.</span>
                             </span>
                             <span className='oue__strategy-card-action'>OPEN</span>
                         </button>
@@ -1568,12 +1725,21 @@ const OverUnderEngine: React.FC = observer(() => {
                             <input className='oue__input' type='number' min='0.35' step='0.05' value={higherLowerStake} onChange={event => setHigherLowerStake(event.target.value)} />
                         </label>
                         <label className='oue__field'>
-                            <span>Barrier</span>
-                            <input className='oue__input' type='number' step='0.1' value={higherLowerBarrier} onChange={event => setHigherLowerBarrier(event.target.value)} />
+                            <span>Barrier (automatic)</span>
+                            <input className='oue__input' type='text' value={higherLowerBarrier || 'Loading…'} readOnly aria-describedby='oue-higher-lower-barrier-status' />
+                            <small id='oue-higher-lower-barrier-status' className='oue__field-help'>{higherLowerBarrierStatus}</small>
                         </label>
                         <label className='oue__field'>
                             <span>Duration (ticks)</span>
                             <input className='oue__input' type='number' min='1' step='1' value={higherLowerDuration} onChange={event => setHigherLowerDuration(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Take profit ({currency})</span>
+                            <input className='oue__input' type='number' min='0' step='0.01' value={higherLowerTakeProfit} onChange={event => setHigherLowerTakeProfit(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Stop loss ({currency})</span>
+                            <input className='oue__input' type='number' min='0' step='0.01' value={higherLowerStopLoss} onChange={event => setHigherLowerStopLoss(event.target.value)} />
                         </label>
                         <label className='oue__entry-toggle'>
                             <span className='oue__entry-toggle-label'>Bulk purchase</span>
@@ -1596,8 +1762,19 @@ const OverUnderEngine: React.FC = observer(() => {
                                 <input className='oue__input' type='number' min='1' step='1' value={higherLowerBulkCount} onChange={event => setHigherLowerBulkCount(event.target.value)} />
                             </label>
                         )}
-                        <button type='button' className='oue__higher-lower-buy' onClick={buyHigherLower}>
-                            Buy {higherLowerSide === 'both' ? 'Both' : higherLowerSide}
+                        <button
+                            type='button'
+                            className={`oue__higher-lower-buy${higherLowerRunning ? ' oue__higher-lower-buy--stop' : ''}`}
+                            onClick={() => {
+                                if (higherLowerRunning) {
+                                    higherLowerStopRef.current = true;
+                                    setHigherLowerStatus('Stopping after current contracts settle…');
+                                } else {
+                                    void buyHigherLower();
+                                }
+                            }}
+                        >
+                            {higherLowerRunning ? 'Stop Engine' : 'Start Engine'}
                         </button>
                         <span className='oue__higher-lower-status' role='status'>{higherLowerStatus}</span>
                     </div>
@@ -1626,7 +1803,7 @@ const OverUnderEngine: React.FC = observer(() => {
                             <strong>{higherLowerMarket?.label ?? chart_store.symbol ?? 'Loading market…'}</strong>
                             <span className='oue__higher-lower-market-confirmed'>Chart synced</span>
                         </div>
-                        <div className='oue__only-ups-downs-contract-note'>Trading both: Higher + Lower</div>
+                        <div className='oue__only-ups-downs-contract-note'>Trading both: Only Ups + Only Downs</div>
                         <label className='oue__field'>
                             <span>Stake ({currency})</span>
                             <input className='oue__input' type='number' min='0.35' step='0.05' value={onlyUpsDownsStake} onChange={event => setOnlyUpsDownsStake(event.target.value)} />
@@ -1634,6 +1811,14 @@ const OverUnderEngine: React.FC = observer(() => {
                         <label className='oue__field'>
                             <span>Duration (ticks)</span>
                             <input className='oue__input' type='number' min='1' step='1' value={onlyUpsDownsDuration} onChange={event => setOnlyUpsDownsDuration(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Take profit ({currency})</span>
+                            <input className='oue__input' type='number' min='0' step='0.01' value={onlyUpsDownsTakeProfit} onChange={event => setOnlyUpsDownsTakeProfit(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Stop loss ({currency})</span>
+                            <input className='oue__input' type='number' min='0' step='0.01' value={onlyUpsDownsStopLoss} onChange={event => setOnlyUpsDownsStopLoss(event.target.value)} />
                         </label>
                         <label className='oue__entry-toggle'>
                             <span className='oue__entry-toggle-label'>Bulk purchase</span>
@@ -1656,8 +1841,19 @@ const OverUnderEngine: React.FC = observer(() => {
                                 <input className='oue__input' type='number' min='1' step='1' value={onlyUpsDownsBulkCount} onChange={event => setOnlyUpsDownsBulkCount(event.target.value)} />
                             </label>
                         )}
-                        <button type='button' className='oue__higher-lower-buy' onClick={buyOnlyUpsDowns}>
-                            Buy Both
+                        <button
+                            type='button'
+                            className={`oue__higher-lower-buy${onlyUpsDownsRunning ? ' oue__higher-lower-buy--stop' : ''}`}
+                            onClick={() => {
+                                if (onlyUpsDownsRunning) {
+                                    onlyUpsDownsStopRef.current = true;
+                                    setOnlyUpsDownsStatus('Stopping after current contracts settle…');
+                                } else {
+                                    void buyOnlyUpsDowns();
+                                }
+                            }}
+                        >
+                            {onlyUpsDownsRunning ? 'Stop Engine' : 'Start Engine'}
                         </button>
                         <span className='oue__higher-lower-status' role='status'>{onlyUpsDownsStatus}</span>
                     </div>
