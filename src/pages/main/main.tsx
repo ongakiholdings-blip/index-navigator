@@ -379,6 +379,8 @@ const AppWrapper = observer(() => {
                 <div
                     className={classNames('main__container', {
                         'main__container--active': active_tour && active_tab === DASHBOARD && !isDesktop,
+                        'main__container--panel-open':
+                            isDesktop && is_drawer_open && active_tab !== DBOT_TABS.DERIV_HOMES,
                     })}
                 >
                     <div className='main__tabs-wrapper'>

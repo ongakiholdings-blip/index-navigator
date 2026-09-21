@@ -427,13 +427,26 @@
             width: 100%;
             display: grid;
             grid-template-rows: auto 1fr;
+            /* An implicit "auto" column sizes its track to the max-content
+               width of its widest item (e.g. the bot list table), which lets
+               the tab content blow out past this grid's own box regardless
+               of its own width/min-width. minmax(0, 1fr) instead caps the
+               column at the grid's own available width, so the panel-open
+               width reduction below actually constrains what's rendered. */
+            grid-template-columns: minmax(0, 1fr);
+            min-width: 0;
 
             &__content {
                 overflow-y: auto;
                 overflow-x: hidden;
                 width: 100%;
+                min-width: 0;
                 height: auto;
                 min-height: 50vh;
+                /* Match the drawer's own slide transition (see dc-drawer.scss)
+                   so the content reflow and the panel's slide-in/out feel
+                   like one motion. */
+                transition: max-width 0.3s ease;
             }
 
             &__content--main__tabs {
@@ -673,6 +686,26 @@
                     }
                 }
             }
+        }
+    }
+
+    /* The run/transaction panel is an absolutely-positioned overlay (see
+       &__run-strategy-wrapper below) and doesn't take up flex/grid space on
+       its own. Reserve room for it here, directly on the tab content, when
+       it's open on desktop, so page content (e.g. dashboard cards) stays
+       fully visible instead of being covered by the panel. No margin/
+       centering here - the content should stay flush against the left edge
+       (same as when the panel is closed) and only shrink on the right side,
+       where the panel actually sits. Written with explicit class names (not
+       & concatenation) because .main__container--panel-open and
+       .main__container are the SAME element - nesting this under
+       &__container above would make Sass require them as separate
+       ancestors, which never matches. Scoped to .dc-tabs__content only (a
+       sibling of .dc-tabs__list, the navigation tab bar), so the tab bar
+       itself always stays full width. */
+    .main__container--panel-open .dc-tabs__content {
+        @include desktop-screen {
+            max-width: calc(100% - 36.6rem);
         }
     }
 
