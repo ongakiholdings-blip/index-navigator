@@ -518,7 +518,8 @@
 }
 
 .oue__higher-lower-chart {
-    min-height: 34rem;
+    height: 42rem;
+    min-height: 42rem;
     flex: 1;
     overflow: hidden;
     border: 1px solid rgb(6 182 212 / 30%);
@@ -526,8 +527,8 @@
     background: rgb(3 15 29 / 75%);
 
     > .dashboard__chart-wrapper {
-        min-height: 34rem;
-        height: 100%;
+        height: 42rem;
+        min-height: 42rem;
     }
 }
 

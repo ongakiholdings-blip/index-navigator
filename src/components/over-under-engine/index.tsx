@@ -396,6 +396,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const digitWindowRef   = useRef<number[]>([]);
     const subscriptionGenerationRef = useRef(0);
     const latestDigitRef   = useRef<number | null>(null);   // always the most recent tick digit
+    const latestQuoteRef   = useRef<{ symbol: string; quote: number } | null>(null);
     const lastTickAtRef    = useRef(0);
     const marketTriggerRef = useRef<HTMLButtonElement>(null);
     const marketDropdownRef = useRef<HTMLDivElement>(null);
@@ -493,22 +494,30 @@ const OverUnderEngine: React.FC = observer(() => {
         (ui as any)?.setPromptHandler?.(false);
     }, [cleanupSubs, run_panel, ui]);
 
-    const getAutomaticHigherLowerBarrier = useCallback(async (symbol: string): Promise<string> => {
-        const response = await (api_base.api as any).send({ contracts_for: symbol });
-        const contracts = response?.contracts_for?.available;
-        if (!Array.isArray(contracts)) throw new Error('Deriv did not return barrier data for this market');
-
-        const higherLowerContracts = contracts.filter((contract: any) =>
-            ['CALL', 'PUT'].includes(contract?.contract_type) &&
-            (contract?.barrier !== undefined || contract?.high_barrier !== undefined || contract?.low_barrier !== undefined)
-        );
-        const contract = higherLowerContracts.find((item: any) => item?.contract_type === 'CALL') || higherLowerContracts[0];
-        const barrier = contract?.barrier ?? contract?.high_barrier ?? contract?.low_barrier;
+    const getAutomaticHigherLowerBarrier = useCallback(async (
+        symbol: string,
+        side: 'higher' | 'lower' = 'higher',
+        duration = Number(higherLowerDuration) || 5
+    ): Promise<string> => {
+        const contractType = side === 'lower' ? 'PUT' : 'CALL';
+        const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
+        const response = await (api_base.api as any).send({
+            proposal: 1,
+            amount: Number(higherLowerStake) || 2,
+            basis: 'stake',
+            contract_type: contractType,
+            currency,
+            duration,
+            duration_unit: 't',
+            underlying_symbol: symbol,
+        });
+        const proposal = response?.proposal;
+        const barrier = proposal?.barrier ?? proposal?.high_barrier ?? proposal?.low_barrier;
         if (barrier === undefined || barrier === null || barrier === '') {
-            throw new Error('No Higher/Lower barrier is available for this market');
+            throw new Error(`Deriv did not return a live ${side} barrier for this market`);
         }
-        return String(barrier);
-    }, []);
+        return String(barrier).trim();
+    }, [client, higherLowerDuration, higherLowerStake]);
 
     useEffect(() => {
         let cancelled = false;
@@ -516,20 +525,31 @@ const OverUnderEngine: React.FC = observer(() => {
         if (!symbol) return () => { cancelled = true; };
 
         setHigherLowerBarrierStatus('Loading market barrier…');
-        void getAutomaticHigherLowerBarrier(symbol)
+        void getAutomaticHigherLowerBarrier(symbol, higherLowerSide === 'lower' ? 'lower' : 'higher')
             .then(barrier => {
                 if (cancelled) return;
                 setHigherLowerBarrier(barrier);
                 setHigherLowerBarrierStatus(`Automatic barrier: ${barrier}`);
             })
-            .catch(error => {
+            .catch(() => {
                 if (cancelled) return;
                 setHigherLowerBarrier('');
-                setHigherLowerBarrierStatus(error?.message || 'Barrier unavailable');
+                setHigherLowerBarrierStatus('');
             });
 
         return () => { cancelled = true; };
-    }, [chart_store.symbol, getAutomaticHigherLowerBarrier]);
+    }, [chart_store.symbol, getAutomaticHigherLowerBarrier, higherLowerSide]);
+
+    const finalizeDirectionalEngine = useCallback((label: string, setRunning: (value: boolean) => void, setStatus: (value: string) => void, isManualStop = false) => {
+        run_panel.setIsRunning(false);
+        run_panel.setContractStage(contract_stages.NOT_RUNNING);
+        (ui as any)?.setAccountSwitcherDisabledMessage?.();
+        (ui as any)?.setPromptHandler?.(false);
+        setRunning(false);
+        if (isManualStop) {
+            setStatus(`${label} stopped manually`);
+        }
+    }, [run_panel, ui]);
 
     const runDirectionalTrading = useCallback(async ({
         amount, duration, bulk, sides, barrier, takeProfit, stopLoss, setStatus, setRunning, stopRef, label,
@@ -542,6 +562,14 @@ const OverUnderEngine: React.FC = observer(() => {
         if (!api) return;
         stopRef.current = false;
         let pnl = 0;
+        run_panel.run_id = `run-${Date.now()}`;
+        run_panel.setIsRunning(true);
+        run_panel.setContractStage(contract_stages.STARTING);
+        run_panel.toggleDrawer(true);
+        (ui as any)?.setAccountSwitcherDisabledMessage?.(
+            localize('Account switching is disabled while your bot is running. Please stop your bot before switching accounts.')
+        );
+        (ui as any)?.setPromptHandler?.(true);
         setRunning(true);
         setStatus(`Running ${label}…`);
         while (!stopRef.current) {
@@ -596,16 +624,20 @@ const OverUnderEngine: React.FC = observer(() => {
                 setStatus(`${label} running — cumulative P&L ${pnl.toFixed(2)}`);
             } catch (error: any) {
                 setStatus(error?.error?.message || error?.message || `${label} failed`);
-                setRunning(false);
+                finalizeDirectionalEngine(label, setRunning, setStatus);
                 return;
             }
         }
         setRunning(false);
+        run_panel.setIsRunning(false);
+        run_panel.setContractStage(contract_stages.NOT_RUNNING);
+        (ui as any)?.setAccountSwitcherDisabledMessage?.();
+        (ui as any)?.setPromptHandler?.(false);
         if (stopRef.current) setStatus(`${label} stopped manually — P&L ${pnl.toFixed(2)}`);
         else if (takeProfit > 0 && pnl >= takeProfit) setStatus(`${label} take profit reached: ${pnl.toFixed(2)}`);
         else if (stopLoss > 0 && pnl <= -stopLoss) setStatus(`${label} stop loss reached: ${pnl.toFixed(2)}`);
         else setStatus(`${label} stopped — P&L ${pnl.toFixed(2)}`);
-    }, [chart_store.symbol, client, transactions]);
+    }, [chart_store.symbol, client, finalizeDirectionalEngine, run_panel, transactions, ui]);
 
     const buyHigherLower = useCallback(async () => {
         const amount = Number(higherLowerStake);
@@ -624,34 +656,21 @@ const OverUnderEngine: React.FC = observer(() => {
         }
 
         const sides = higherLowerSide === 'both' ? ['CALL', 'PUT'] : [higherLowerSide === 'higher' ? 'CALL' : 'PUT'];
-        const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
         const symbol = chart_store.symbol || '1HZ10V';
-        setHigherLowerStatus('Refreshing automatic market barrier…');
-        let barrier: string;
-        try {
-            barrier = await getAutomaticHigherLowerBarrier(symbol);
-            setHigherLowerBarrier(barrier);
-            setHigherLowerBarrierStatus(`Automatic barrier: ${barrier}`);
-        } catch (error: any) {
-            setHigherLowerStatus(error?.message || 'Unable to load the market barrier');
+        const barrier = higherLowerBarrier.trim();
+        if (!barrier || !/^[+-]?\d+(?:\.\d+)?$/.test(barrier)) {
+            setHigherLowerStatus('Enter a valid barrier, for example +64.64 or -64.64');
             return;
         }
-        const requests = sides.flatMap(contractType =>
-            Array.from({ length: bulk }, () => ({
-                buy: '1',
-                price: amount,
-                parameters: {
-                    amount,
-                    basis: 'stake',
-                    contract_type: contractType,
-                    currency,
-                    duration,
-                    duration_unit: 't',
-                    barrier: String(barrier),
-                    underlying_symbol: symbol,
-                },
-            }))
+
+        run_panel.run_id = `run-${Date.now()}`;
+        run_panel.setIsRunning(true);
+        run_panel.setContractStage(contract_stages.STARTING);
+        run_panel.toggleDrawer(true);
+        (ui as any)?.setAccountSwitcherDisabledMessage?.(
+            localize('Account switching is disabled while your bot is running. Please stop your bot before switching accounts.')
         );
+        (ui as any)?.setPromptHandler?.(true);
 
         void runDirectionalTrading({
             amount, duration, bulk, sides, barrier, takeProfit, stopLoss, setRunning: setHigherLowerRunning,
@@ -659,35 +678,7 @@ const OverUnderEngine: React.FC = observer(() => {
             setStatus: setHigherLowerStatus,
             label: 'Higher/Lower',
         });
-        return;
-        setHigherLowerStatus(`Buying ${requests.length} contract${requests.length === 1 ? '' : 's'}…`);
-        try {
-            const responses = await Promise.all(requests.map(request => (api_base.api as any).send(request)));
-            responses.forEach(response => {
-                const buy = response?.buy;
-                if (!buy?.contract_id) return;
-                transactions.onBotContractEvent({
-                    ...buy,
-                    contract_id: buy.contract_id,
-                    contract_type: buy.contract_type,
-                    barrier: String(barrier),
-                    underlying_symbol: symbol,
-                    currency: buy.currency ?? currency,
-                    buy_price: buy.buy_price ?? amount,
-                    date_start: buy.date_start ?? buy.purchase_time ?? Math.floor(Date.now() / 1000),
-                    status: 'open',
-                    profit: 0,
-                    transaction_ids: {
-                        ...(buy.transaction_ids ?? {}),
-                        buy: buy.transaction_id ?? buy.transaction_ids?.buy ?? buy.contract_id,
-                    },
-                } as any);
-            });
-            setHigherLowerStatus(`${responses.filter(response => response?.buy?.contract_id).length} contract(s) purchased`);
-        } catch (error: any) {
-            setHigherLowerStatus(error?.error?.message || error?.message || 'Purchase failed');
-        }
-    }, [chart_store.symbol, client, getAutomaticHigherLowerBarrier, higherLowerBulkCount, higherLowerBulkEnabled, higherLowerDuration, higherLowerSide, higherLowerStake, higherLowerStopLoss, higherLowerTakeProfit, runDirectionalTrading, transactions]);
+    }, [chart_store.symbol, higherLowerBarrier, higherLowerBulkCount, higherLowerBulkEnabled, higherLowerDuration, higherLowerSide, higherLowerStake, higherLowerStopLoss, higherLowerTakeProfit, runDirectionalTrading, run_panel, ui]);
 
     const buyOnlyUpsDowns = useCallback(async () => {
         const amount = Number(onlyUpsDownsStake);
@@ -705,6 +696,15 @@ const OverUnderEngine: React.FC = observer(() => {
             return;
         }
 
+        run_panel.run_id = `run-${Date.now()}`;
+        run_panel.setIsRunning(true);
+        run_panel.setContractStage(contract_stages.STARTING);
+        run_panel.toggleDrawer(true);
+        (ui as any)?.setAccountSwitcherDisabledMessage?.(
+            localize('Account switching is disabled while your bot is running. Please stop your bot before switching accounts.')
+        );
+        (ui as any)?.setPromptHandler?.(true);
+
         void runDirectionalTrading({
             amount,
             duration,
@@ -717,53 +717,7 @@ const OverUnderEngine: React.FC = observer(() => {
             stopRef: onlyUpsDownsStopRef,
             label: 'Only Ups / Only Downs',
         });
-        return;
-
-        const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
-        const symbol = chart_store.symbol || '1HZ10V';
-        const requests = ['RUNHIGH', 'RUNLOW'].flatMap(contractType =>
-            Array.from({ length: bulk }, () => ({
-                buy: '1',
-                price: amount,
-                parameters: {
-                    amount,
-                    basis: 'stake',
-                    contract_type: contractType,
-                    currency,
-                    duration,
-                    duration_unit: 't',
-                    underlying_symbol: symbol,
-                },
-            }))
-        );
-
-        setOnlyUpsDownsStatus(`Buying ${requests.length} contracts…`);
-        try {
-            const responses = await Promise.all(requests.map(request => (api_base.api as any).send(request)));
-            responses.forEach(response => {
-                const buy = response?.buy;
-                if (!buy?.contract_id) return;
-                transactions.onBotContractEvent({
-                    ...buy,
-                    contract_id: buy.contract_id,
-                    contract_type: buy.contract_type,
-                    underlying_symbol: symbol,
-                    currency: buy.currency ?? currency,
-                    buy_price: buy.buy_price ?? amount,
-                    date_start: buy.date_start ?? buy.purchase_time ?? Math.floor(Date.now() / 1000),
-                    status: 'open',
-                    profit: 0,
-                    transaction_ids: {
-                        ...(buy.transaction_ids ?? {}),
-                        buy: buy.transaction_id ?? buy.transaction_ids?.buy ?? buy.contract_id,
-                    },
-                } as any);
-            });
-            setOnlyUpsDownsStatus(`${responses.filter(response => response?.buy?.contract_id).length} contract(s) purchased`);
-        } catch (error: any) {
-            setOnlyUpsDownsStatus(error?.error?.message || error?.message || 'Purchase failed');
-        }
-    }, [chart_store.symbol, client, onlyUpsDownsBulkCount, onlyUpsDownsBulkEnabled, onlyUpsDownsDuration, onlyUpsDownsStake, onlyUpsDownsStopLoss, onlyUpsDownsTakeProfit, runDirectionalTrading, transactions]);
+    }, [onlyUpsDownsBulkCount, onlyUpsDownsBulkEnabled, onlyUpsDownsDuration, onlyUpsDownsStake, onlyUpsDownsStopLoss, onlyUpsDownsTakeProfit, runDirectionalTrading, run_panel, ui]);
 
     // ── limits ────────────────────────────────────────────────────────────────
 
@@ -1143,6 +1097,7 @@ const OverUnderEngine: React.FC = observer(() => {
             const data = getApiData(msg);
             const tick = data?.msg_type === 'tick' ? data.tick : data?.tick;
             if (tick?.quote !== undefined && symbolRef.current === sym && (!tick.symbol || tick.symbol === sym)) {
+                latestQuoteRef.current = { symbol: sym, quote: Number(tick.quote) };
                 const pipSize = Number(tick.pip_size ?? (api_base as any).pip_sizes?.[sym]);
                 const priceStr = formatQuote(tick.quote, pipSize);
                 const d = getLastDigit(priceStr);
@@ -1593,19 +1548,26 @@ const OverUnderEngine: React.FC = observer(() => {
 
     // Register this engine's stop handler with the shared run-panel Stop
     // button (Transactions panel / toolbar) so clicking Stop there also stops
-    // this engine. Registration only exists while this component is mounted,
-    // which only happens while the AI Bots tab is active — so this never
-    // affects Bot Builder or any other tab.
+    // the active AI bot strategy. Registration only exists while this
+    // component is mounted, which only happens while the AI Bots tab is active.
     useEffect(() => {
         (run_panel as any).registerAiBotStopHandler?.(() => {
             if (eng.current.running) {
                 stopEngine('Stopped from Transactions panel');
             }
+            if (higherLowerRunning) {
+                higherLowerStopRef.current = true;
+                setHigherLowerStatus('Stopping after current contracts settle…');
+            }
+            if (onlyUpsDownsRunning) {
+                onlyUpsDownsStopRef.current = true;
+                setOnlyUpsDownsStatus('Stopping after current contracts settle…');
+            }
         });
         return () => {
             (run_panel as any).unregisterAiBotStopHandler?.();
         };
-    }, [run_panel, stopEngine]);
+    }, [higherLowerRunning, onlyUpsDownsRunning, run_panel, setHigherLowerStatus, setOnlyUpsDownsStatus, stopEngine]);
 
     // ── render ────────────────────────────────────────────────────────────────
 
@@ -1725,9 +1687,22 @@ const OverUnderEngine: React.FC = observer(() => {
                             <input className='oue__input' type='number' min='0.35' step='0.05' value={higherLowerStake} onChange={event => setHigherLowerStake(event.target.value)} />
                         </label>
                         <label className='oue__field'>
-                            <span>Barrier (automatic)</span>
-                            <input className='oue__input' type='text' value={higherLowerBarrier || 'Loading…'} readOnly aria-describedby='oue-higher-lower-barrier-status' />
-                            <small id='oue-higher-lower-barrier-status' className='oue__field-help'>{higherLowerBarrierStatus}</small>
+                            <span>Barrier</span>
+                            <input
+                                className='oue__input'
+                                type='text'
+                                inputMode='decimal'
+                                placeholder='e.g. +64.64 or -64.64'
+                                value={higherLowerBarrier}
+                                onChange={event => {
+                                    setHigherLowerBarrier(event.target.value);
+                                }}
+                                disabled={higherLowerRunning}
+                                aria-describedby='oue-higher-lower-barrier-status'
+                            />
+                            <small id='oue-higher-lower-barrier-status' className='oue__field-help'>
+                                {higherLowerBarrierStatus}
+                            </small>
                         </label>
                         <label className='oue__field'>
                             <span>Duration (ticks)</span>
