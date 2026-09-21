@@ -439,8 +439,9 @@ export default class CopyTradingStore {
         try {
             const currentLoginid = this.leader_account?.loginid || '';
             const storedAccounts = JSON.parse(sessionStorage.getItem('deriv_accounts') || '[]') as DerivAccount[];
-            let demoLoginid = this.leader_account?.is_virtual ? currentLoginid : null;
-            let realLoginid = this.leader_account?.is_virtual ? null : currentLoginid;
+            const currentIsDemo = !!this.leader_account?.is_virtual;
+            let demoLoginid = currentIsDemo ? currentLoginid : null;
+            let realLoginid = currentIsDemo ? null : currentLoginid;
 
             if (!demoLoginid && currentLoginid) {
                 demoLoginid = getMarketingDemoLoginid(currentLoginid);
@@ -456,29 +457,36 @@ export default class CopyTradingStore {
 
             const tokenMap = JSON.parse(localStorage.getItem('accountsList') || '{}') as Record<string, unknown>;
             const demoToken = demoLoginid && typeof tokenMap[demoLoginid] === 'string' ? tokenMap[demoLoginid] : '';
+            const realToken = realLoginid && typeof tokenMap[realLoginid] === 'string' ? tokenMap[realLoginid] : '';
 
-            if (!demoToken) {
-                this.leader_error = 'The paired demo account is not available in the logged-in session';
-                return;
-            }
+            if (currentIsDemo) {
+                // The active demo API is already the leader. The paired real
+                // account must be opened as a separate follower connection.
+                if (!realToken) {
+                    this.leader_error = 'The paired real account is not available in the logged-in session';
+                    return;
+                }
+                if (!this.followers.some(follower => follower.account?.loginid === realLoginid)) {
+                    await this.addFollower(realToken);
+                }
+            } else {
+                if (!demoToken) {
+                    this.leader_error = 'The paired demo account is not available in the logged-in session';
+                    return;
+                }
+                if (!destinationApi || !destinationAccountInfo?.loginid) {
+                    this.leader_error = 'The logged-in real account is not available as a destination';
+                    return;
+                }
 
-            if (!destinationApi || !destinationAccountInfo?.loginid) {
-                this.leader_error = 'The logged-in real account is not available as a destination';
-                return;
-            }
-
-            if (realLoginid) {
                 this.ensureService();
                 this.service!.moveLeaderToFollower(realLoginid);
-            }
-            if (!this.followers.some(follower => follower.account?.loginid === destinationAccountInfo.loginid)) {
-                await this.connectFollowerFromApi(destinationApi, {
-                    ...destinationAccountInfo,
-                    is_virtual: 0,
-                });
-            }
-
-            if (!this.leader_account?.is_virtual || this.leader_account.loginid !== demoLoginid) {
+                if (!this.followers.some(follower => follower.account?.loginid === destinationAccountInfo.loginid)) {
+                    await this.connectFollowerFromApi(destinationApi, {
+                        ...destinationAccountInfo,
+                        is_virtual: 0,
+                    });
+                }
                 await this.connectLeader(demoToken);
             }
             await this.startCopying();

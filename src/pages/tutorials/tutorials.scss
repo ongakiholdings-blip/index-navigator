@@ -337,3 +337,24 @@
         box-shadow: inset 0 1px rgb(255 255 255 / 70%);
     }
 }
+
+/* Tutorial content sits on the dark glass background; keep all readable copy
+   white while leaving the light sidebar and search controls unchanged. */
+.tutorials-page__content {
+    color: #fff;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    li,
+    a,
+    label,
+    button {
+        color: #fff !important;
+    }
+}

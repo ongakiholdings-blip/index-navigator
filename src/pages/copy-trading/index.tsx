@@ -181,37 +181,45 @@ const CopyTrading = observer(() => {
                         </div>
                         <p>{localize('Replicate trades from your logged-in account to a destination account.')}</p>
                     </div>
-                    {canStop ? (
-                        <button className='ct2__start-btn ct2__start-btn--stop' onClick={() => ct.stopCopying()}>
-                            <IconStop /> {localize('Stop')}
+                    <div className='ct2__start-actions'>
+                        {!canStop && (
+                            <>
+                                <button
+                                    className='ct2__start-btn ct2__start-btn--demo-real'
+                                    onClick={() =>
+                                        void ct.startDemoToReal(api_base?.api, {
+                                            ...(api_base as any)?.account_info,
+                                            loginid: store.client.loginid || (api_base as any)?.account_info?.loginid,
+                                            balance: parseFloat(store.client.balance) || 0,
+                                            currency: store.client.currency,
+                                        })
+                                    }
+                                    disabled={!canStartButtons}
+                                    title={localize('Copy trades from the logged-in demo account to real destinations')}
+                                >
+                                    <IconPlay /> {localize('Start Demo → Real')}
+                                </button>
+                                <button
+                                    className='ct2__start-btn ct2__start-btn--api'
+                                    onClick={() => void ct.startCopying()}
+                                    disabled={!canStartButtons}
+                                    title={localize('Activate copying to the destination API token')}
+                                >
+                                    <IconPlay /> {localize('Activate API Trades')}
+                                </button>
+                            </>
+                        )}
+                        <button
+                            className={`ct2__start-btn ${ct.is_running ? 'ct2__start-btn--stop' : 'ct2__start-btn--trades'}`}
+                            onClick={() => void (ct.is_running ? ct.stopCopying() : ct.startCopying())}
+                            disabled={!ct.is_running && !canStartButtons}
+                            title={localize('Start or stop live copy trading')}
+                            aria-label={ct.is_running ? localize('Stop trades') : localize('Start trades')}
+                        >
+                            {ct.is_running ? <IconStop /> : <IconPlay />}
+                            {ct.is_running ? localize('Stop Trades') : localize('Start Trades')}
                         </button>
-                    ) : (
-                        <div className='ct2__start-actions'>
-                            <button
-                                className='ct2__start-btn ct2__start-btn--demo-real'
-                                onClick={() =>
-                                    void ct.startDemoToReal(api_base?.api, {
-                                        ...(api_base as any)?.account_info,
-                                        loginid: store.client.loginid || (api_base as any)?.account_info?.loginid,
-                                        balance: parseFloat(store.client.balance) || 0,
-                                        currency: store.client.currency,
-                                    })
-                                }
-                                disabled={!canStartButtons}
-                                title={localize('Copy trades from the logged-in demo account to real destinations')}
-                            >
-                                <IconPlay /> {localize('Start Demo → Real')}
-                            </button>
-                            <button
-                                className='ct2__start-btn ct2__start-btn--api'
-                                onClick={() => void ct.startCopying()}
-                                disabled={!canStartButtons}
-                                title={localize('Activate copying to the destination API token')}
-                            >
-                                <IconPlay /> {localize('Activate API Trades')}
-                            </button>
-                        </div>
-                    )}
+                    </div>
                 </header>
 
                 <section className='ct2__section'>

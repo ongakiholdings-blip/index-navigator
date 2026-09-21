@@ -163,6 +163,11 @@
             border-color: #7b36c7;
         }
 
+        &__start-btn--trades {
+            background: #225ec4;
+            border-color: #225ec4;
+        }
+
         &__section {
             padding: 2rem 0;
             border-bottom: 1px solid #dfd3f4;
@@ -829,6 +834,54 @@ body.theme--light {
 
         &--ok  { background: var(--transparent-success); color: var(--status-success); }
         &--err { background: var(--transparent-danger); color: var(--status-danger); }
+    }
+}
+
+body.theme--light .ct2 {
+    background:
+        linear-gradient(180deg, rgb(4 12 24 / 82%), rgb(4 10 20 / 92%)),
+        url('../../assets/robot-bg-desktop.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-attachment: fixed !important;
+    color: #eef6ff;
+
+    > .ct2__panel {
+        background: linear-gradient(145deg, rgb(4 28 48 / 88%), rgb(3 15 29 / 94%));
+        border-color: rgb(91 214 220 / 42%);
+        box-shadow:
+            0 1.2rem 2.8rem rgb(0 0 0 / 35%),
+            inset 0 1px rgb(255 255 255 / 12%);
+        backdrop-filter: none;
+    }
+
+    .ct2__panel-header {
+        border-bottom-color: rgb(180 230 240 / 24%);
+
+        h1,
+        p {
+            color: #eef6ff;
+        }
+    }
+
+    .ct2__section-heading h2,
+    .ct2__multiplier-label {
+        color: #eef6ff;
+    }
+
+    @media (max-width: 640px) {
+        background-image:
+            linear-gradient(180deg, rgb(4 12 24 / 86%), rgb(4 10 20 / 94%)),
+            url('../../assets/robot-bg-mobile.jpg') !important;
+        background-attachment: scroll !important;
+    }
+}
+
+@media (min-width: 641px) {
+    .ct2 > .ct2__panel {
+        width: 100%;
+        max-width: none;
+        margin-inline: 0;
     }
 }
 

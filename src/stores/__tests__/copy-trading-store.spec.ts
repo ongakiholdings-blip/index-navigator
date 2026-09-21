@@ -49,7 +49,7 @@ describe('resolveAutoFollowerToken', () => {
         expect(account?.is_virtual).toBe(false);
     });
 
-    it('starts copy trading when the leader is connected even without a follower', async () => {
+    it('does not start copy trading when no follower is connected', async () => {
         const store = new CopyTradingStore();
         const startCopying = jest.fn();
         (store as any).service = { startCopying, stopCopying: jest.fn(), stakeMultiplier: 1 };
@@ -64,8 +64,9 @@ describe('resolveAutoFollowerToken', () => {
 
         await store.startCopying();
 
-        expect(startCopying).toHaveBeenCalled();
-        expect(store.is_running).toBe(true);
+        expect(startCopying).not.toHaveBeenCalled();
+        expect(store.is_running).toBe(false);
+        expect(store.leader_error).toContain('destination API token');
     });
 
     it('reconnects the leader and follower after a transient disconnect', async () => {

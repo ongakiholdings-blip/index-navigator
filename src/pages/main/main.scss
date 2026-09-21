@@ -474,6 +474,14 @@
                         min-height: 100%;
                     }
                 }
+
+                // Let the AI Bots and Copy Trading backgrounds render through
+                // the shared tab-content surface instead of being washed out
+                // by the mobile/tablet general-section background.
+                &:has(> .oue),
+                &:has(> .ct2) {
+                    background-color: transparent;
+                }
             }
 
             &__active-line {

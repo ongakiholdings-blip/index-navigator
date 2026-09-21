@@ -7,7 +7,6 @@ import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { contract_stages } from '@/constants/contract-stage';
 import {
     STRATEGY_DEFINITIONS,
-    STRATEGY_ORDER,
     getStrategyEntryDigits,
     matchesStrategyEntrySequence,
     isWinningDigit,
@@ -16,6 +15,7 @@ import {
 } from '@/constants/over-under-strategies';
 import { localize } from '@deriv-com/translations';
 import { botNotification } from '@/components/bot-notification/bot-notification';
+import ChartWrapper from '@/pages/chart/chart-wrapper';
 import './over-under-engine.scss';
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -25,8 +25,9 @@ const UNDER_BARRIER = '4';
 const MAX_DIGITS    = 30;
 const DIGIT_WINDOW  = 1000;
 
-/** Digits that act as entry triggers */
-const ENTRY_DIGITS = new Set([4, 5]);
+function isAlternatingMiddlePair(first: number | undefined, second: number | undefined): boolean {
+    return (first === 4 && second === 5) || (first === 5 && second === 4);
+}
 
 export interface Market { symbol: string; label: string; short: string; code: string; }
 
@@ -223,6 +224,7 @@ interface EngineState {
     // hidden power-engine trigger (Over 5 / Under 4 card only) — see startEngine
     powerEngineActive:    boolean;
     powerAwaitingTrigger: boolean;
+    dualEntryPending:    boolean;
     // per-round profit tracking
     currentRoundOverStake:  number;
     currentRoundUnderStake: number;
@@ -276,6 +278,7 @@ function makeInitState(
         entryDigit: null,
         powerEngineActive: false,
         powerAwaitingTrigger: false,
+        dualEntryPending: false,
         currentRoundOverStake: stake,
         currentRoundUnderStake: stake,
         overRoundProfit: null,
@@ -292,7 +295,7 @@ function makeInitState(
 // ─── component ────────────────────────────────────────────────────────────────
 
 const OverUnderEngine: React.FC = observer(() => {
-    const { client, dashboard, transactions, run_panel, summary_card, ui } = useStore();
+    const { client, chart_store, dashboard, transactions, run_panel, summary_card, ui } = useStore();
 
     // Config
     const [stake, setStake]           = useState('0.5');
@@ -314,6 +317,20 @@ const OverUnderEngine: React.FC = observer(() => {
     // from the Strategy tab (entry filter, recovery method, stake sizing).
     const [strategyId, setStrategyId] = useState<StrategyId>('dual');
     const [strategySelected, setStrategySelected] = useState(false);
+    const [higherLowerSelected, setHigherLowerSelected] = useState(false);
+    const [onlyUpsDownsSelected, setOnlyUpsDownsSelected] = useState(false);
+    const [higherLowerSide, setHigherLowerSide] = useState<'higher' | 'lower' | 'both'>('higher');
+    const [higherLowerStake, setHigherLowerStake] = useState('2');
+    const [higherLowerBarrier, setHigherLowerBarrier] = useState('0.5');
+    const [higherLowerDuration, setHigherLowerDuration] = useState('5');
+    const [higherLowerBulkEnabled, setHigherLowerBulkEnabled] = useState(false);
+    const [higherLowerBulkCount, setHigherLowerBulkCount] = useState('3');
+    const [higherLowerStatus, setHigherLowerStatus] = useState('Ready to buy');
+    const [onlyUpsDownsStake, setOnlyUpsDownsStake] = useState('2');
+    const [onlyUpsDownsDuration, setOnlyUpsDownsDuration] = useState('2');
+    const [onlyUpsDownsBulkEnabled, setOnlyUpsDownsBulkEnabled] = useState(false);
+    const [onlyUpsDownsBulkCount, setOnlyUpsDownsBulkCount] = useState('3');
+    const [onlyUpsDownsStatus, setOnlyUpsDownsStatus] = useState('Ready to buy');
     const [singleWins, setSingleWins]     = useState(0);
     const [singleLosses, setSingleLosses] = useState(0);
     const [singleStake, setSingleStake]   = useState(0.5);
@@ -466,6 +483,130 @@ const OverUnderEngine: React.FC = observer(() => {
         (ui as any)?.setAccountSwitcherDisabledMessage?.();
         (ui as any)?.setPromptHandler?.(false);
     }, [cleanupSubs, run_panel, ui]);
+
+    const buyHigherLower = useCallback(async () => {
+        const amount = Number(higherLowerStake);
+        const duration = Number(higherLowerDuration);
+        const barrier = Number(higherLowerBarrier);
+        const bulk = higherLowerBulkEnabled ? Number(higherLowerBulkCount) : 1;
+        if (!api_base.api) {
+            setHigherLowerStatus('Not connected — please log in first');
+            return;
+        }
+        if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(duration) || duration < 1 ||
+            !Number.isFinite(barrier) || !Number.isInteger(bulk) || bulk < 1) {
+            setHigherLowerStatus('Enter valid stake, barrier, duration, and bulk values');
+            return;
+        }
+
+        const sides = higherLowerSide === 'both' ? ['CALL', 'PUT'] : [higherLowerSide === 'higher' ? 'CALL' : 'PUT'];
+        const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
+        const symbol = chart_store.symbol || '1HZ10V';
+        const requests = sides.flatMap(contractType =>
+            Array.from({ length: bulk }, () => ({
+                buy: '1',
+                price: amount,
+                parameters: {
+                    amount,
+                    basis: 'stake',
+                    contract_type: contractType,
+                    currency,
+                    duration,
+                    duration_unit: 't',
+                    barrier: String(barrier),
+                    underlying_symbol: symbol,
+                },
+            }))
+        );
+
+        setHigherLowerStatus(`Buying ${requests.length} contract${requests.length === 1 ? '' : 's'}…`);
+        try {
+            const responses = await Promise.all(requests.map(request => (api_base.api as any).send(request)));
+            responses.forEach(response => {
+                const buy = response?.buy;
+                if (!buy?.contract_id) return;
+                transactions.onBotContractEvent({
+                    ...buy,
+                    contract_id: buy.contract_id,
+                    contract_type: buy.contract_type,
+                    barrier: String(barrier),
+                    underlying_symbol: symbol,
+                    currency: buy.currency ?? currency,
+                    buy_price: buy.buy_price ?? amount,
+                    date_start: buy.date_start ?? buy.purchase_time ?? Math.floor(Date.now() / 1000),
+                    status: 'open',
+                    profit: 0,
+                    transaction_ids: {
+                        ...(buy.transaction_ids ?? {}),
+                        buy: buy.transaction_id ?? buy.transaction_ids?.buy ?? buy.contract_id,
+                    },
+                } as any);
+            });
+            setHigherLowerStatus(`${responses.filter(response => response?.buy?.contract_id).length} contract(s) purchased`);
+        } catch (error: any) {
+            setHigherLowerStatus(error?.error?.message || error?.message || 'Purchase failed');
+        }
+    }, [chart_store.symbol, client, higherLowerBarrier, higherLowerBulkCount, higherLowerBulkEnabled, higherLowerDuration, higherLowerSide, higherLowerStake, transactions]);
+
+    const buyOnlyUpsDowns = useCallback(async () => {
+        const amount = Number(onlyUpsDownsStake);
+        const duration = Number(onlyUpsDownsDuration);
+        const bulk = onlyUpsDownsBulkEnabled ? Number(onlyUpsDownsBulkCount) : 1;
+        if (!api_base.api) {
+            setOnlyUpsDownsStatus('Not connected — please log in first');
+            return;
+        }
+        if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(duration) || duration < 1 ||
+            !Number.isInteger(bulk) || bulk < 1) {
+            setOnlyUpsDownsStatus('Enter valid stake, duration, and bulk values');
+            return;
+        }
+
+        const currency = (api_base as any).account_info?.currency || (client as any)?.currency || 'USD';
+        const symbol = chart_store.symbol || '1HZ10V';
+        const requests = ['CALL', 'PUT'].flatMap(contractType =>
+            Array.from({ length: bulk }, () => ({
+                buy: '1',
+                price: amount,
+                parameters: {
+                    amount,
+                    basis: 'stake',
+                    contract_type: contractType,
+                    currency,
+                    duration,
+                    duration_unit: 't',
+                    underlying_symbol: symbol,
+                },
+            }))
+        );
+
+        setOnlyUpsDownsStatus(`Buying ${requests.length} contracts…`);
+        try {
+            const responses = await Promise.all(requests.map(request => (api_base.api as any).send(request)));
+            responses.forEach(response => {
+                const buy = response?.buy;
+                if (!buy?.contract_id) return;
+                transactions.onBotContractEvent({
+                    ...buy,
+                    contract_id: buy.contract_id,
+                    contract_type: buy.contract_type,
+                    underlying_symbol: symbol,
+                    currency: buy.currency ?? currency,
+                    buy_price: buy.buy_price ?? amount,
+                    date_start: buy.date_start ?? buy.purchase_time ?? Math.floor(Date.now() / 1000),
+                    status: 'open',
+                    profit: 0,
+                    transaction_ids: {
+                        ...(buy.transaction_ids ?? {}),
+                        buy: buy.transaction_id ?? buy.transaction_ids?.buy ?? buy.contract_id,
+                    },
+                } as any);
+            });
+            setOnlyUpsDownsStatus(`${responses.filter(response => response?.buy?.contract_id).length} contract(s) purchased`);
+        } catch (error: any) {
+            setOnlyUpsDownsStatus(error?.error?.message || error?.message || 'Purchase failed');
+        }
+    }, [chart_store.symbol, client, onlyUpsDownsBulkCount, onlyUpsDownsBulkEnabled, onlyUpsDownsDuration, onlyUpsDownsStake, transactions]);
 
     // ── limits ────────────────────────────────────────────────────────────────
 
@@ -673,6 +814,7 @@ const OverUnderEngine: React.FC = observer(() => {
         const usePowerEngineNow = nextStrategy === 'dual' && powerEngineEnabled;
         e.powerEngineActive = usePowerEngineNow;
         e.powerAwaitingTrigger = usePowerEngineNow;
+        e.dualEntryPending = false;
         if (e.running) {
             e.waitingForEntry = e.useEntryMode && !usePowerEngineNow;
             setIsWaitingEntry(e.useEntryMode && !usePowerEngineNow);
@@ -687,6 +829,8 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const goBackToStrategies = useCallback(() => {
         if (eng.current.running) stopEngine('Strategy selection reopened');
+        setHigherLowerSelected(false);
+        setOnlyUpsDownsSelected(false);
         setMarketOpen(false);
         setStrategySelected(false);
     }, [stopEngine]);
@@ -797,19 +941,10 @@ const OverUnderEngine: React.FC = observer(() => {
 
             if (e.powerEngineActive) {
                 // Power engine already rotated to the next market the instant
-                // the trade was fired. If the market's most recent digit (from
-                // history load or a live tick received while the previous
-                // round was settling) is already 5, fire immediately instead
-                // of waiting indefinitely for a brand new tick — this closes
-                // the loop so the engine keeps trading on every market switch.
+                // the trade was fired. A completed 4→5 or 5→4 sequence arms
+                // the next tick on that market.
                 const sign = roundPnl >= 0 ? '+' : '';
                 setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
-                if (e.powerAwaitingTrigger && latestDigitRef.current === 5) {
-                    e.powerAwaitingTrigger = false;
-                    fireRoundRef.current();
-                    advanceMarketCycleRef.current();
-                    e.powerAwaitingTrigger = true;
-                }
                 return;
             }
 
@@ -870,26 +1005,29 @@ const OverUnderEngine: React.FC = observer(() => {
                     return bounded;
                 });
                 setPrices(prev  => { const n = [...prev,  priceStr]; return n.length > MAX_DIGITS ? n.slice(-MAX_DIGITS) : n; });
+                const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
+                digitWindowRef.current = nextWindow;
 
-                // Hidden power-engine trigger (Over 5 / Under 4 card only, when
-                // the Entry Point Power Engine toggle is on): fire a trade the
-                // moment digit 5 appears, then immediately rotate to the next
-                // market and wait for digit 5 to appear again there. This is
-                // intentionally not surfaced in any UI/status text.
+                // The power engine arms on 4→5 or 5→4 and trades on the
+                // following digit.
                 if (eng.current.running && eng.current.powerEngineActive) {
-                    if (eng.current.powerAwaitingTrigger && !eng.current.roundInFlight && d === 5) {
+                    if (eng.current.powerAwaitingTrigger && !eng.current.roundInFlight && eng.current.dualEntryPending) {
+                        eng.current.dualEntryPending = false;
                         eng.current.powerAwaitingTrigger = false;
                         fireRoundRef.current();
                         advanceMarketCycleRef.current();
                         eng.current.powerAwaitingTrigger = true;
+                    } else if (
+                        eng.current.powerAwaitingTrigger &&
+                        isAlternatingMiddlePair(nextWindow[nextWindow.length - 2], nextWindow[nextWindow.length - 1])
+                    ) {
+                        eng.current.dualEntryPending = true;
                     }
                     return;
                 }
 
                 if (eng.current.running && eng.current.useEntryMode && eng.current.waitingForEntry && !eng.current.roundInFlight) {
                     const selectedStrategy = eng.current.strategyId === 'dual' || eng.current.strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[eng.current.strategyId];
-                    const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
-                    digitWindowRef.current = nextWindow;
                     const recentDigits = nextWindow.slice(-6);
                     const activeEntrySignal = !selectedStrategy
                         ? (eng.current.strategyId === 'confidence'
@@ -937,6 +1075,22 @@ const OverUnderEngine: React.FC = observer(() => {
                     }
 
                     if (activeEntrySignal) {
+                        if (eng.current.strategyId === 'dual') {
+                            if (eng.current.dualEntryPending) {
+                                eng.current.dualEntryPending = false;
+                                eng.current.waitingForEntry = false;
+                                eng.current.entryDigit = d;
+                                setLastEntryDigit(d);
+                                setLastSkipReason(null);
+                                setIsWaitingEntry(false);
+                                fireRoundRef.current();
+                            } else if (isAlternatingMiddlePair(nextWindow[nextWindow.length - 2], nextWindow[nextWindow.length - 1])) {
+                                eng.current.dualEntryPending = true;
+                                setLastSkipReason(`Entry sequence detected: ${nextWindow[nextWindow.length - 2]} → ${d}. Trading on the next digit.`);
+                            }
+                            return;
+                        }
+
                         setLastSignalConfidence(activeEntrySignal.confidence);
                         if (activeEntrySignal.shouldTrade) {
                             eng.current.waitingForEntry = false;
@@ -964,15 +1118,6 @@ const OverUnderEngine: React.FC = observer(() => {
                         return;
                     }
 
-                    if (ENTRY_DIGITS.has(d)) {
-                        eng.current.waitingForEntry = false;
-                        eng.current.entryDigit      = d;
-                        setLastEntryDigit(d);
-                        setLastSkipReason(null);
-                        setIsWaitingEntry(false);
-                        fireRoundRef.current();
-                        return;
-                    }
                 }
             }
         });
@@ -1016,18 +1161,14 @@ const OverUnderEngine: React.FC = observer(() => {
             // Evaluate the freshly loaded history immediately against the
             // active entry logic. This runs every time a market is (re)loaded
             // — on first start AND every subsequent market-cycle switch — so
-            // a trigger that's already present in the just-fetched history
-            // (e.g. digit 5 for the hidden power engine, or 4/5 for the
-            // visible entry mode) is never missed while waiting for a brand
-            // new live tick to arrive.
+            // a completed 4→5 or 5→4 sequence in the just-fetched history
+            // arms the next live tick without executing immediately.
             if (latestHistoryDigit !== undefined && eng.current.running && !eng.current.roundInFlight) {
                 if (eng.current.powerEngineActive) {
-                    if (eng.current.powerAwaitingTrigger && latestHistoryDigit === 5) {
-                        eng.current.powerAwaitingTrigger = false;
-                        fireRoundRef.current();
-                        advanceMarketCycleRef.current();
-                        eng.current.powerAwaitingTrigger = true;
-                    }
+                    eng.current.dualEntryPending = isAlternatingMiddlePair(
+                        historyDigits[historyDigits.length - 2],
+                        historyDigits[historyDigits.length - 1]
+                    );
                 } else if (eng.current.useEntryMode && eng.current.waitingForEntry) {
                     const activeStrategyId = eng.current.strategyId;
                     const selectedStrategy = activeStrategyId === 'dual' || activeStrategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
@@ -1039,9 +1180,16 @@ const OverUnderEngine: React.FC = observer(() => {
                                 : getStrategyEntryDigits(activeStrategyId).includes(latestHistoryDigit))
                         : (activeStrategyId === 'confidence'
                             ? evaluateConfidenceGateSignal(nextWindow).shouldTrade
-                            : ENTRY_DIGITS.has(latestHistoryDigit));
+                            : activeStrategyId === 'dual'
+                                ? isAlternatingMiddlePair(
+                                    historyDigits[historyDigits.length - 2],
+                                    historyDigits[historyDigits.length - 1]
+                                )
+                                : getStrategyEntryDigits(activeStrategyId).includes(latestHistoryDigit));
 
-                    if (shouldTrigger) {
+                    if (activeStrategyId === 'dual') {
+                        eng.current.dualEntryPending = shouldTrigger;
+                    } else if (shouldTrigger) {
                         eng.current.waitingForEntry = false;
                         eng.current.entryDigit = latestHistoryDigit;
                         setLastEntryDigit(latestHistoryDigit);
@@ -1116,9 +1264,8 @@ const OverUnderEngine: React.FC = observer(() => {
 
         const resolvedStrategy = strategyId === 'dual' || strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[strategyId];
         // Hidden power-engine trigger: Over 5 / Under 4 card only. When active,
-        // it replaces the visible entry-mode logic for this run — trades fire
-        // only when digit 5 appears, and the market switches immediately after
-        // each trade so it waits for digit 5 again on the next market.
+        // it replaces the visible entry-mode logic for this run — 4→5 or 5→4
+        // arms the trade, which executes on the following digit.
         const usePowerEngine = strategyId === 'dual' && powerEngineEnabled;
         // Risk controls always come from the values entered in the active form.
         // Strategy recommendations are informational and must not replace them.
@@ -1128,6 +1275,7 @@ const OverUnderEngine: React.FC = observer(() => {
         eng.current.waitingForEntry = entryMode;
         eng.current.powerEngineActive = usePowerEngine;
         eng.current.powerAwaitingTrigger = usePowerEngine;
+        eng.current.dualEntryPending = false;
         if (resolvedStrategy) {
             eng.current.baseStake = stakeValue;
             eng.current.overStake = stakeValue;
@@ -1311,6 +1459,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const latestPriceDigit = latestPrice ? latestPrice.slice(-1) : '';
     const profitPct   = (n: number, total: number) => total > 0 ? Math.round((n / total) * 100) : 0;
     const activeMarket = MARKETS.find(m => m.symbol === symbol) ?? MARKETS[0];
+    const higherLowerMarket = MARKETS.find(m => m.symbol === chart_store.symbol);
     const digitCounts = Array.from({ length: 10 }, (_, digit) => digitWindow.filter(value => value === digit).length);
     const digitPercentages = digitCounts.map(count => digitWindow.length > 0 ? (count / digitWindow.length) * 100 : 0);
     const isDualStrategyMode = strategyId === 'dual' || strategyId === 'confidence';
@@ -1319,7 +1468,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     return (
         <div className='oue'>
-            {!strategySelected && (
+            {!strategySelected && !higherLowerSelected && !onlyUpsDownsSelected && (
                 <section className='oue__strategy-picker' aria-labelledby='oue-strategy-picker-title'>
                     <div className='oue__strategy-picker-header'>
                         <span className='oue__title-icon'>🤖</span>
@@ -1346,29 +1495,171 @@ const OverUnderEngine: React.FC = observer(() => {
                             </span>
                             <span className='oue__strategy-card-action'>OPEN</span>
                         </button>
-                        {STRATEGY_ORDER.map(id => {
-                            const definition = STRATEGY_DEFINITIONS[id];
-                            return (
+                        <button
+                            type='button'
+                            role='listitem'
+                            className='oue__strategy-card oue__strategy-card--new'
+                            aria-label='Open Higher Lower chart workspace'
+                            onClick={() => setHigherLowerSelected(true)}
+                        >
+                            <span className='oue__strategy-card-badge'>↕</span>
+                            <span className='oue__strategy-card-content'>
+                                <span className='oue__strategy-card-title'>HIGHER / LOWER</span>
+                                <span className='oue__strategy-card-meta'>HIGHER + LOWER · NEW</span>
+                                <span className='oue__strategy-card-description'>A separate higher/lower trading strategy workspace.</span>
+                            </span>
+                            <span className='oue__strategy-card-action'>COMING SOON</span>
+                        </button>
+                        <button
+                            type='button'
+                            role='listitem'
+                            className='oue__strategy-card oue__strategy-card--new oue__strategy-card--only-ups-downs'
+                            aria-label='Open Only Ups Only Downs workspace'
+                            onClick={() => setOnlyUpsDownsSelected(true)}
+                        >
+                            <span className='oue__strategy-card-badge'>↕</span>
+                            <span className='oue__strategy-card-content'>
+                                <span className='oue__strategy-card-title'>ONLY UPS / ONLY DOWNS</span>
+                                <span className='oue__strategy-card-meta'>CALL + PUT · BOTH ONLY</span>
+                                <span className='oue__strategy-card-description'>Trade both upward and downward contracts together without a barrier.</span>
+                            </span>
+                            <span className='oue__strategy-card-action'>OPEN</span>
+                        </button>
+                    </div>
+                </section>
+            )}
+
+            {higherLowerSelected && !strategySelected && (
+                <section className='oue__higher-lower-workspace' aria-labelledby='oue-higher-lower-title'>
+                    <button type='button' className='oue__back-to-strategies' onClick={goBackToStrategies}>
+                        <span aria-hidden='true'>←</span>
+                        Back to strategies
+                    </button>
+                    <div className='oue__higher-lower-header'>
+                        <div>
+                            <h1 id='oue-higher-lower-title'>HIGHER / LOWER</h1>
+                            <p>Market chart workspace for the Higher / Lower strategy.</p>
+                        </div>
+                    </div>
+                    <div className='oue__higher-lower-chart'>
+                        <ChartWrapper show_digits_stats={false} />
+                    </div>
+                    <div className='oue__higher-lower-controls'>
+                        <div className='oue__higher-lower-market' role='status' aria-live='polite'>
+                            <span className='oue__higher-lower-market-dot' aria-hidden='true' />
+                            <span>Active market</span>
+                            <strong>{higherLowerMarket?.label ?? chart_store.symbol ?? 'Loading market…'}</strong>
+                            <span className='oue__higher-lower-market-confirmed'>Chart synced</span>
+                        </div>
+                        <div className='oue__higher-lower-sides' role='group' aria-label='Contract direction'>
+                            {(['higher', 'lower', 'both'] as const).map(side => (
                                 <button
-                                    key={id}
+                                    key={side}
                                     type='button'
-                                    role='listitem'
-                                    className='oue__strategy-card'
-                                    style={{ '--strategy-color': definition.badgeColor } as React.CSSProperties}
-                                    onClick={() => selectStrategy(id)}
+                                    className={higherLowerSide === side ? 'oue__higher-lower-side oue__higher-lower-side--active' : 'oue__higher-lower-side'}
+                                    onClick={() => setHigherLowerSide(side)}
                                 >
-                                    <span className='oue__strategy-card-badge'>{definition.badge}</span>
-                                    <span className='oue__strategy-card-content'>
-                                        <span className='oue__strategy-card-title'>{definition.label}</span>
-                                        <span className='oue__strategy-card-meta'>
-                                            {definition.winProbabilityPct}% WIN · {definition.risk.toUpperCase()} RISK
-                                        </span>
-                                        <span className='oue__strategy-card-description'>{definition.intro}</span>
-                                    </span>
-                                    <span className='oue__strategy-card-action'>OPEN</span>
+                                    {side[0].toUpperCase() + side.slice(1)}
                                 </button>
-                            );
-                        })}
+                            ))}
+                        </div>
+                        <label className='oue__field'>
+                            <span>Stake ({currency})</span>
+                            <input className='oue__input' type='number' min='0.35' step='0.05' value={higherLowerStake} onChange={event => setHigherLowerStake(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Barrier</span>
+                            <input className='oue__input' type='number' step='0.1' value={higherLowerBarrier} onChange={event => setHigherLowerBarrier(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Duration (ticks)</span>
+                            <input className='oue__input' type='number' min='1' step='1' value={higherLowerDuration} onChange={event => setHigherLowerDuration(event.target.value)} />
+                        </label>
+                        <label className='oue__entry-toggle'>
+                            <span className='oue__entry-toggle-label'>Bulk purchase</span>
+                            <div
+                                className={`oue__toggle${higherLowerBulkEnabled ? ' oue__toggle--on' : ''}`}
+                                onClick={() => setHigherLowerBulkEnabled(value => !value)}
+                                role='switch'
+                                aria-checked={higherLowerBulkEnabled}
+                                tabIndex={0}
+                                onKeyDown={event => {
+                                    if (event.key === ' ' || event.key === 'Enter') setHigherLowerBulkEnabled(value => !value);
+                                }}
+                            >
+                                <div className='oue__toggle-thumb' />
+                            </div>
+                        </label>
+                        {higherLowerBulkEnabled && (
+                            <label className='oue__field'>
+                                <span>Bulk count</span>
+                                <input className='oue__input' type='number' min='1' step='1' value={higherLowerBulkCount} onChange={event => setHigherLowerBulkCount(event.target.value)} />
+                            </label>
+                        )}
+                        <button type='button' className='oue__higher-lower-buy' onClick={buyHigherLower}>
+                            Buy {higherLowerSide === 'both' ? 'Both' : higherLowerSide}
+                        </button>
+                        <span className='oue__higher-lower-status' role='status'>{higherLowerStatus}</span>
+                    </div>
+                </section>
+            )}
+
+            {onlyUpsDownsSelected && !strategySelected && (
+                <section className='oue__higher-lower-workspace oue__only-ups-downs-workspace' aria-labelledby='oue-only-ups-downs-title'>
+                    <button type='button' className='oue__back-to-strategies' onClick={goBackToStrategies}>
+                        <span aria-hidden='true'>←</span>
+                        Back to strategies
+                    </button>
+                    <div className='oue__higher-lower-header'>
+                        <div>
+                            <h1 id='oue-only-ups-downs-title'>ONLY UPS / ONLY DOWNS</h1>
+                            <p>Both upward and downward contracts are purchased together.</p>
+                        </div>
+                    </div>
+                    <div className='oue__higher-lower-chart'>
+                        <ChartWrapper show_digits_stats={false} />
+                    </div>
+                    <div className='oue__higher-lower-controls oue__only-ups-downs-controls'>
+                        <div className='oue__higher-lower-market' role='status' aria-live='polite'>
+                            <span className='oue__higher-lower-market-dot' aria-hidden='true' />
+                            <span>Active market</span>
+                            <strong>{higherLowerMarket?.label ?? chart_store.symbol ?? 'Loading market…'}</strong>
+                            <span className='oue__higher-lower-market-confirmed'>Chart synced</span>
+                        </div>
+                        <div className='oue__only-ups-downs-contract-note'>Trading both: Higher + Lower</div>
+                        <label className='oue__field'>
+                            <span>Stake ({currency})</span>
+                            <input className='oue__input' type='number' min='0.35' step='0.05' value={onlyUpsDownsStake} onChange={event => setOnlyUpsDownsStake(event.target.value)} />
+                        </label>
+                        <label className='oue__field'>
+                            <span>Duration (ticks)</span>
+                            <input className='oue__input' type='number' min='1' step='1' value={onlyUpsDownsDuration} onChange={event => setOnlyUpsDownsDuration(event.target.value)} />
+                        </label>
+                        <label className='oue__entry-toggle'>
+                            <span className='oue__entry-toggle-label'>Bulk purchase</span>
+                            <div
+                                className={`oue__toggle${onlyUpsDownsBulkEnabled ? ' oue__toggle--on' : ''}`}
+                                onClick={() => setOnlyUpsDownsBulkEnabled(value => !value)}
+                                role='switch'
+                                aria-checked={onlyUpsDownsBulkEnabled}
+                                tabIndex={0}
+                                onKeyDown={event => {
+                                    if (event.key === ' ' || event.key === 'Enter') setOnlyUpsDownsBulkEnabled(value => !value);
+                                }}
+                            >
+                                <div className='oue__toggle-thumb' />
+                            </div>
+                        </label>
+                        {onlyUpsDownsBulkEnabled && (
+                            <label className='oue__field'>
+                                <span>Bulk count</span>
+                                <input className='oue__input' type='number' min='1' step='1' value={onlyUpsDownsBulkCount} onChange={event => setOnlyUpsDownsBulkCount(event.target.value)} />
+                            </label>
+                        )}
+                        <button type='button' className='oue__higher-lower-buy' onClick={buyOnlyUpsDowns}>
+                            Buy Both
+                        </button>
+                        <span className='oue__higher-lower-status' role='status'>{onlyUpsDownsStatus}</span>
                     </div>
                 </section>
             )}
@@ -1544,7 +1835,7 @@ const OverUnderEngine: React.FC = observer(() => {
                                                     : strategyId === 'odd'
                                                         ? <>Watching for the sequence <strong>even, even, even, skip, odd</strong> before the next Odd trade…</>
                                                         : `Watching for ${activeStrategyDef?.label} trigger digit${getStrategyEntryDigits(strategyId).length > 1 ? 's' : ''} ${getStrategyEntryDigits(strategyId).join(', ')}…`
-                            : <>Watching for digit <strong>4</strong> or <strong>5</strong> to trigger next trade…</>}
+                            : <>Watching for <strong>4 → 5</strong> or <strong>5 → 4</strong>, then trading on the next digit…</>}
                         {lastEntryDigit !== null && (
                             <span className='oue__entry-last'>Last entry: <strong>{lastEntryDigit}</strong></span>
                         )}
