@@ -23,7 +23,10 @@
         text-shadow: 0 0.15rem 0.4rem rgb(0 0 0 / 70%) !important;
     }
 
-    /* Deriv-Homes glass-water treatment, scoped to Dashboard only. */
+
+    /* Free Bots wallpaper. Keep a theme-aware veil over the image so the
+       existing dashboard content remains legible in both appearances. */
+        /* Deriv-Homes glass-water treatment, scoped to Dashboard only. */
     .tab__dashboard {
         .tab__dashboard__content {
             background:

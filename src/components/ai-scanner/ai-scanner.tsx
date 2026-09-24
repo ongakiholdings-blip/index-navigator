@@ -100,7 +100,7 @@ const AiScanner = () => {
 
     // ── scanner state ─────────────────────────────────────────────────────────
     const [isOpen,     setIsOpen]     = useState(false);
-    const [scanMode,   setScanMode]   = useState<ScanMode>('auto');
+    const [scanMode,  setScanMode]  = useState<ScanMode>('overunder1');
     const [ticks,      setTicks]      = useState(3000);
     const [scanState,  setScanState]  = useState<ScanState>('idle');
     const [progress,   setProgress]   = useState<ScanProgress | null>(null);
@@ -180,12 +180,8 @@ const AiScanner = () => {
     const buildAndLoadBot = async (): Promise<void> => {
         if (!bestResult) return;
 
-        const xmlFile = bestResult.contractGroup === 'evenodd'
-            ? 'frosty_even_odd_ai_bot'
-            : 'frosty_over_under_ai_bot';
-        const botName = bestResult.contractGroup === 'evenodd'
-            ? 'Frosty Even/Odd AI Bot'
-            : 'Frosty Over/Under AI Bot';
+        const xmlFile = 'dominator_vol_2';
+        const botName = 'DOMINATOR VOL 2';
 
         const xml_module = await import(`../../xml/${xmlFile}.xml`);
         let block_string: string = xml_module.default;
@@ -200,9 +196,7 @@ const AiScanner = () => {
             entryPoint: bestResult.entryPoint,
         };
 
-        block_string = bestResult.contractGroup === 'evenodd'
-            ? injectEvenOddParams(block_string, opts)
-            : injectOverUnderParams(block_string, opts);
+        block_string = injectOverUnderParams(block_string, opts);
 
         if (store?.dashboard) store.dashboard.setActiveTab(DBOT_TABS.BOT_BUILDER);
         setIsOpen(false);
@@ -263,9 +257,7 @@ const AiScanner = () => {
     // Derived display values
     const isDone  = scanState === 'done' && !!bestResult;
     const aiMarket        = isDone ? bestResult!.name       : '—';
-    const aiContractType  = isDone
-        ? (bestResult!.contractGroup === 'evenodd' ? 'Even / Odd' : 'Over / Under')
-        : '—';
+    const aiContractType  = isDone ? 'Over / Under' : '—';
     const aiPrediction    = isDone ? bestResult!.tradeType  : '—';
     const aiPercentage    = isDone ? bestResult!.percentage : '—';
     const aiEntryPoint    = isDone && bestResult!.entryPoint !== undefined
@@ -313,18 +305,18 @@ const AiScanner = () => {
                     {/* ── Mode toggle ──────────────────────────────────────── */}
                     <div className='ai-scanner-modal__mode-bar'>
                         <button
-                            className={`ai-scanner-modal__mode-btn${scanMode === 'auto' ? ' ai-scanner-modal__mode-btn--active' : ''}`}
-                            onClick={() => setScanMode('auto')}
+                            className={`ai-scanner-modal__mode-btn${scanMode === 'overunder1' ? ' ai-scanner-modal__mode-btn--active' : ''}`}
+                            onClick={() => setScanMode('overunder1')}
                             disabled={scanState === 'scanning'}
                         >
-                            ⚡ Auto
+                            Over 1 / Under 8
                         </button>
                         <button
-                            className={`ai-scanner-modal__mode-btn${scanMode === 'evenodd' ? ' ai-scanner-modal__mode-btn--active ai-scanner-modal__mode-btn--evenodd' : ''}`}
-                            onClick={() => setScanMode('evenodd')}
+                            className={`ai-scanner-modal__mode-btn${scanMode === 'overunder2' ? ' ai-scanner-modal__mode-btn--active' : ''}`}
+                            onClick={() => setScanMode('overunder2')}
                             disabled={scanState === 'scanning'}
                         >
-                            ⇌ Even / Odd
+                            Over 2 / Under 7
                         </button>
                     </div>
 
@@ -392,7 +384,7 @@ const AiScanner = () => {
 
                         {/* ── AI Scanner Results ────────────────────────────── */}
                         <div className='ai-scanner-modal__section-label'>
-                            AI SCANNER RESULTS
+                            AI STRATEGY RESULTS
                             {isDone && (
                                 <span className={`ai-scanner-modal__source-badge${output!.used1s ? ' ai-scanner-modal__source-badge--1s' : ''}`}>
                                     {sourceLabel}
@@ -410,7 +402,7 @@ const AiScanner = () => {
                                     </span>
                                 </div>
                                 <div className='ai-scanner-modal__field'>
-                                    <label>CONTRACT TYPE</label>
+                                    <label>STRATEGY</label>
                                     <span className={isDone ? 'ai-scanner-modal__field-value--ai' : ''}>
                                         {aiContractType}
                                     </span>

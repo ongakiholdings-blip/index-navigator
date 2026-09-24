@@ -201,6 +201,7 @@
             }
         }
 
+
         &__primary-action {
             background: #062b56;
             box-shadow: 0 0.8rem 1.8rem rgb(3 37 65 / 28%);
@@ -472,6 +473,37 @@
                     > .oue {
                         height: auto;
                         min-height: 100%;
+                    }
+                }
+
+                &:has(> .scanner-page) {
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    height: auto;
+                    min-height: 0;
+                    scroll-behavior: smooth;
+                    -webkit-overflow-scrolling: touch;
+                    background:
+                        linear-gradient(145deg, rgb(3 10 20 / 95%), rgb(4 25 49 / 94%)),
+                        url('../../assets/free-bots-wallpaper.jpeg') center / cover;
+
+                    > .scanner-page {
+                        min-height: 100%;
+                        background-color: #030a14;
+                    }
+
+                    &:has(> .matches-hub) {
+                        overflow-y: auto;
+                        overflow-x: hidden;
+                        height: auto;
+                        min-height: 0;
+                        scroll-behavior: smooth;
+                        -webkit-overflow-scrolling: touch;
+                        background: #03101e;
+
+                        > .matches-hub {
+                            min-height: 100%;
+                        }
                     }
                 }
 
@@ -798,6 +830,47 @@
         &__button#db-animation {
             &__run-button {
                 background-color: var(--button-primary-default);
+            }
+
+            /* Final main navigation surface override. */
+            body .main__tabs-wrapper .dc-tabs--main__tabs {
+                background:
+                    linear-gradient(90deg, rgb(2 14 31 / 96%), rgb(4 29 55 / 90%)),
+                    url('../../assets/free-bots-wallpaper.jpeg') center / cover no-repeat !important;
+                border-bottom: 1px solid rgb(56 189 248 / 45%) !important;
+                box-shadow: 0 0.3rem 1rem rgb(0 0 0 / 28%), inset 0 -1px rgb(103 232 249 / 15%) !important;
+            }
+
+            body .main__tabs-wrapper .dc-tabs--main__tabs .dc-tabs__list {
+                background: transparent !important;
+                gap: 0.25rem;
+                padding: 0.35rem 0.6rem;
+            }
+
+            body .main__tabs-wrapper .dc-tabs--main__tabs .dc-tabs__item {
+                border: 1px solid transparent;
+                border-radius: 0.65rem;
+                color: #bae6fd !important;
+                transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            body .main__tabs-wrapper .dc-tabs--main__tabs .dc-tabs__item:hover {
+                background: rgb(14 116 144 / 28%) !important;
+                border-color: rgb(103 232 249 / 35%);
+                color: #ecfeff !important;
+            }
+
+            body .main__tabs-wrapper .dc-tabs--main__tabs .dc-tabs__item.dc-tabs__active {
+                background: linear-gradient(135deg, rgb(8 145 178 / 42%), rgb(37 99 235 / 32%)) !important;
+                border-color: rgb(103 232 249 / 72%);
+                box-shadow: 0 0 1rem rgb(34 211 238 / 20%), inset 0 1px rgb(255 255 255 / 18%);
+                color: #fff !important;
+            }
+
+            body .main__tabs-wrapper .dc-tabs--main__tabs .dc-tabs__active-line {
+                background: #67e8f9 !important;
+                box-shadow: 0 0 0.7rem rgb(103 232 249 / 80%);
+                height: 2px;
             }
 
             &__stop-button {

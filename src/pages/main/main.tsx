@@ -49,6 +49,9 @@ import Dashboard from '../dashboard';
 import RunStrategy from '../dashboard/run-strategy';
 import FreeBots from '../free-bots';
 import OverUnderEngine from '@/components/over-under-engine';
+import BulkTrader from '@/pages/bulk-trader';
+import Scanner from '@/pages/scanner';
+import MatchesHub from '@/pages/matches-hub';
 import AnalysisTools from '../analysis';
 import CopyTrading from '../copy-trading';
 import DigitMatcher from '@/components/digit-matcher';
@@ -91,7 +94,22 @@ const AppWrapper = observer(() => {
     const { clear } = summary_card;
     const { DASHBOARD, BOT_BUILDER } = DBOT_TABS;
     const init_render = React.useRef(true);
-    const hash = ['deriv_homes', 'dashboard', 'bot_builder', 'free_bots', 'over_under_engine', 'signal_zone', 'chart', 'deriv_t_view', 'copy_trading', 'analysis', 'tutorial'];
+    const hash = [
+        'deriv_homes',
+        'dashboard',
+        'bot_builder',
+        'free_bots',
+        'bulk_trader',
+        'over_under_engine',
+        'signal_zone',
+        'scanner',
+        'matches_hub',
+        'chart',
+        'deriv_t_view',
+        'copy_trading',
+        'analysis',
+        'tutorial',
+    ];
     const { isDesktop } = useDevice();
     const location = useLocation();
     const navigate = useNavigate();
@@ -492,6 +510,21 @@ const AppWrapper = observer(() => {
                             <div
                                 label={
                                     <>
+                                        <LabelPairedChartLineCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='BULK TRADER' />
+                                    </>
+                                }
+                                id='id-bulk-trader'
+                            >
+                                <BulkTrader />
+                            </div>
+                            <div
+                                label={
+                                    <>
                                         <LabelPairedArrowUpArrowDownCaptionBoldIcon
                                             height='24px'
                                             width='24px'
@@ -512,7 +545,7 @@ const AppWrapper = observer(() => {
                                             width='24px'
                                             fill='var(--text-general)'
                                         />
-                                        <Localize i18n_default_text='Signal-Zone' />
+                                        <Localize i18n_default_text='Analysis-HUB' />
                                     </>
                                 }
                                 id='id-signal-zone'
@@ -520,10 +553,40 @@ const AppWrapper = observer(() => {
                                 <div className='external-tab-frame'>
                                     <iframe
                                         src='https://indexnavigator.vercel.app/'
-                                        title='Signal-Zone'
+                                        title='Analysis-HUB'
                                         allow='clipboard-read; clipboard-write'
                                     />
                                 </div>
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedMagnifyingGlassPlusCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='SCANNER' />
+                                    </>
+                                }
+                                id='id-scanner'
+                            >
+                                <Scanner />
+                            </div>
+                            <div
+                                label={
+                                    <>
+                                        <LabelPairedChartLineCaptionRegularIcon
+                                            height='24px'
+                                            width='24px'
+                                            fill='var(--text-general)'
+                                        />
+                                        <Localize i18n_default_text='MATCHES-HUB' />
+                                    </>
+                                }
+                                id='id-matches-hub'
+                            >
+                                <MatchesHub />
                             </div>
                             <div
                                 label={

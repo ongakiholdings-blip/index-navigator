@@ -136,6 +136,77 @@
         max-width: calc(100vw - 2rem);
         margin: 0 !important;
     }
+
+    .Toastify__toast-container--top-center .session-complete-toast {
+        width: min(20rem, calc(100vw - 2rem));
+        min-height: 0;
+        height: auto;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid rgb(32 212 212 / 38%);
+        border-radius: 0.9rem;
+        background: linear-gradient(145deg, #101b21, #070d12);
+        box-shadow: 0 0 2rem rgb(32 212 212 / 20%), 0 1rem 3rem rgb(0 0 0 / 48%);
+    }
+
+    .session-complete-notification {
+        display: grid;
+        gap: 0.35rem;
+        padding: 1rem;
+        text-align: center;
+        color: #e7ffff;
+
+        &__eyebrow {
+            color: #8da7ab;
+            font-size: 0.55rem;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+        }
+
+        &__title {
+            color: #e7ffff;
+            font-size: 0.8rem;
+        }
+
+        &__profit {
+            margin: 0.15rem 0 0.35rem;
+            color: #46e88e;
+            font-size: 1.55rem;
+            line-height: 1;
+            &--negative { color: #ff6565; }
+        }
+
+        &__stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.35rem;
+            margin-bottom: 0.35rem;
+            div {
+                display: grid;
+                gap: 0.25rem;
+                padding: 0.45rem 0.2rem;
+                border: 1px solid rgb(255 255 255 / 10%);
+                border-radius: 0.35rem;
+                background: rgb(255 255 255 / 3%);
+            }
+            span { color: #819397; font-size: 0.45rem; font-weight: 800; }
+            strong { color: #e7ffff; font-size: 0.8rem; }
+        }
+
+        &__continue {
+            min-height: 2rem;
+            margin-top: 0.35rem;
+            border: 0;
+            border-radius: 0.4rem;
+            background: linear-gradient(180deg, #55e8f5, #079bb9);
+            color: #032330;
+            cursor: pointer;
+            font-size: 0.62rem;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+        }
+    }
 }
 
 @include mobile-or-tablet-screen {

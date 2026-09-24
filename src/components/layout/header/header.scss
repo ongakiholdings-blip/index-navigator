@@ -76,6 +76,52 @@
             fill: #0f172a;
         }
     }
+
+    /* Robotics market header theme. Keep the controls readable over the
+       photographic backdrop with a dark glass treatment and cyan accents. */
+    .app-header {
+        background:
+            linear-gradient(90deg, rgb(2 14 31 / 96%), rgb(4 29 55 / 91%)),
+            url('../../../assets/free-bots-wallpaper.jpeg') center / cover no-repeat !important;
+        border-bottom: 1px solid rgb(56 189 248 / 42%);
+        box-shadow: 0 0.35rem 1.2rem rgb(0 0 0 / 35%), inset 0 -1px rgb(103 232 249 / 18%);
+        color: #e0f2fe;
+
+        .deriv-text,
+        button,
+        a {
+            color: #e0f2fe;
+        }
+
+        button:hover,
+        a:hover {
+            color: #67e8f9;
+        }
+
+        .auth-actions__balance,
+        .auth-actions__balance strong {
+            color: #bae6fd;
+        }
+
+        .currency-control__button {
+            background: rgb(8 47 73 / 78%);
+            border-color: rgb(103 232 249 / 42%);
+            color: #e0f2fe;
+        }
+
+        &__account-settings {
+            border-inline-end-color: rgb(103 232 249 / 24%);
+        }
+
+        &__account-settings,
+        .notifications__wrapper,
+        &__menu {
+            svg > path,
+            svg > g > path {
+                fill: #bae6fd;
+            }
+        }
+    }
 }
 
 .account-switcher {
@@ -172,6 +218,37 @@
     .derivs-text__size--md {
         font-size: 14px;
         line-height: 18px;
+    }
+}
+
+/* Secondary navigation header: match the dark robotics treatment used by the
+   primary header while retaining its existing tab layout. */
+body .derivs-secondary-tabs {
+    background:
+        linear-gradient(90deg, rgb(2 14 31 / 96%), rgb(4 29 55 / 91%)),
+        url('../../../assets/free-bots-wallpaper.jpeg') center / cover no-repeat !important;
+    border-bottom: 1px solid rgb(56 189 248 / 48%);
+    box-shadow: 0 0.3rem 1rem rgb(0 0 0 / 28%), inset 0 -1px rgb(103 232 249 / 16%);
+    color: #bae6fd;
+
+    .deriv-text,
+    button,
+    a {
+        color: #bae6fd !important;
+    }
+
+    [aria-selected='true'],
+    .active {
+        background: linear-gradient(135deg, rgb(8 145 178 / 42%), rgb(37 99 235 / 32%)) !important;
+        border-radius: 0.6rem;
+        box-shadow: 0 0 0.9rem rgb(34 211 238 / 18%), inset 0 1px rgb(255 255 255 / 14%);
+        color: #fff !important;
+    }
+
+    button:hover,
+    a:hover {
+        background: rgb(14 116 144 / 28%);
+        color: #ecfeff !important;
     }
 }
 
@@ -477,6 +554,22 @@
 @keyframes auth-btn-cyan-shimmer {
     0%   { background-position: -200% center; }
     100% { background-position:  200% center; }
+}
+
+/* Final header surface override: the shared Header component applies its
+   own background after the base app-header rules. */
+body .app-header {
+    background:
+        linear-gradient(90deg, rgb(2 14 31 / 96%), rgb(4 29 55 / 91%)),
+        url('../../../assets/free-bots-wallpaper.jpeg') center / cover no-repeat !important;
+    border-bottom: 1px solid rgb(56 189 248 / 55%) !important;
+    box-shadow: 0 0.35rem 1.2rem rgb(0 0 0 / 35%), inset 0 -1px rgb(103 232 249 / 18%) !important;
+}
+
+body .app-header .deriv-text,
+body .app-header button,
+body .app-header a {
+    color: #e0f2fe !important;
 }
 
 .deriv-accordion--underline {

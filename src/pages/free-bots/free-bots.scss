@@ -199,6 +199,9 @@
 }
 
 .free-bots {
+    background:
+        linear-gradient(180deg, rgb(2 12 27 / 10%), rgb(2 9 21 / 28%)),
+        url('../../assets/free-bots-wallpaper.jpeg') center / cover no-repeat;
     padding: 2.4rem;
     height: 100%;
     overflow-y: auto;
@@ -297,54 +300,78 @@
     }
 
     &__mini-tabs {
+        align-items: center;
         display: flex;
         gap: 0.8rem;
         margin-bottom: 2.4rem;
-        border-bottom: 2px solid var(--general-section-2);
-        padding-bottom: 0;
+        border: 1px solid rgb(255 255 255 / 24%);
+        border-radius: 1rem;
+        background: rgb(2 12 27 / 58%);
+        box-shadow: 0 0.6rem 1.4rem rgb(0 0 0 / 22%), inset 0 1px rgb(255 255 255 / 12%);
+        padding: 0.45rem;
     }
 
     &__mini-tab {
-        padding: 0.8rem 2.4rem;
-        border: none;
-        border-bottom: 3px solid transparent;
-        background: transparent;
-        color: var(--text-general);
-        font-size: 1.4rem;
+        align-items: center;
+        background: rgb(255 255 255 / 8%);
+        border: 1px solid rgb(255 255 255 / 18%);
+        border-radius: 0.7rem;
+        color: #f4f8ff;
+        display: flex;
+        font-size: 1.1rem;
         font-weight: 800;
         cursor: pointer;
-        letter-spacing: 0.08em;
-        display: flex;
-        align-items: center;
         gap: 0.6rem;
-        margin-bottom: -2px;
-        transition: color 0.2s ease, border-color 0.2s ease;
+        justify-content: center;
+        letter-spacing: 0.08em;
+        min-width: 9.5rem;
+        padding: 0.75rem 1.25rem;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 
         &:hover {
-            color: var(--text-prominent);
-            border-bottom-color: rgb(247 197 59 / 40%);
+            background: rgb(255 255 255 / 14%);
+            border-color: rgb(255 255 255 / 42%);
+            transform: translateY(-1px);
         }
 
         &--active {
-            color: #f7c53b;
-            border-bottom-color: #f7c53b;
+            background: linear-gradient(135deg, rgb(247 197 59 / 28%), rgb(59 130 246 / 25%));
+            border-color: #f7c53b;
+            box-shadow: 0 0 1rem rgb(247 197 59 / 25%), inset 0 1px rgb(255 255 255 / 20%);
+            color: #fff;
+        }
+
+        &--popular {
+            &.free-bots__mini-tab--active {
+                background: linear-gradient(135deg, rgb(251 113 133 / 24%), rgb(249 115 22 / 24%));
+                border-color: #fb7185;
+                box-shadow: 0 0 1rem rgb(249 115 22 / 25%), inset 0 1px rgb(255 255 255 / 20%);
+                color: #fff;
+            }
         }
 
         &--engine {
-            &:hover { border-bottom-color: rgb(16 185 129 / 40%); }
-
             &.free-bots__mini-tab--active {
                 color: #10b981;
-                border-bottom-color: #10b981;
+                border-color: #10b981;
+                background: rgb(16 185 129 / 18%);
             }
         }
 
         &--classics {
-            &:hover { border-bottom-color: rgb(205 127 50 / 40%); }
-
             &.free-bots__mini-tab--active {
                 color: #a78bfa;
-                border-bottom-color: #a78bfa;
+                border-color: #a78bfa;
+                background: rgb(167 139 250 / 18%);
+            }
+        }
+
+        &--bot-store {
+            &.free-bots__mini-tab--active {
+                background: linear-gradient(135deg, rgb(56 189 248 / 22%), rgb(99 102 241 / 24%));
+                border-color: #38bdf8;
+                box-shadow: 0 0 1rem rgb(56 189 248 / 25%), inset 0 1px rgb(255 255 255 / 20%);
+                color: #e0f2fe;
             }
         }
     }
@@ -592,4 +619,3 @@
         }
     }
 }
-

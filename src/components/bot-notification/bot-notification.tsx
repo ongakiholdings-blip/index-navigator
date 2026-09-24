@@ -49,3 +49,47 @@ export const botNotification = (
         }
     );
 };
+
+export const sessionCompleteNotification = ({
+    profit,
+    trades,
+    won,
+    lost,
+    reason,
+}: {
+    profit: number;
+    trades: number;
+    won: number;
+    lost: number;
+    reason: 'take-profit' | 'stop-loss';
+}) => {
+    return toast(
+        ({ closeToast }) => (
+            <div className='session-complete-notification'>
+                <span className='session-complete-notification__eyebrow'>BULK SESSION COMPLETE</span>
+                <strong className='session-complete-notification__title'>
+                    {reason === 'take-profit' ? 'Take Profit Reached' : 'Stop Loss Reached'}
+                </strong>
+                <strong className={`session-complete-notification__profit${profit < 0 ? ' session-complete-notification__profit--negative' : ''}`}>
+                    {profit >= 0 ? '+' : ''}{profit.toFixed(2)} USD
+                </strong>
+                <div className='session-complete-notification__stats'>
+                    <div><span>TRADES</span><strong>{trades}</strong></div>
+                    <div><span>WON</span><strong>{won}</strong></div>
+                    <div><span>LOST</span><strong>{lost}</strong></div>
+                </div>
+                <button className='session-complete-notification__continue' onClick={closeToast} type='button'>
+                    CONTINUE
+                </button>
+            </div>
+        ),
+        {
+            type: profit >= 0 ? 'success' : 'error',
+            position: 'top-center',
+            autoClose: false,
+            closeButton: false,
+            closeOnClick: false,
+            className: 'session-complete-toast',
+        }
+    );
+};

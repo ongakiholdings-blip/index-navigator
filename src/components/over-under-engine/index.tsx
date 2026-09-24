@@ -14,7 +14,7 @@ import {
     type StrategyId,
 } from '@/constants/over-under-strategies';
 import { localize } from '@deriv-com/translations';
-import { botNotification } from '@/components/bot-notification/bot-notification';
+import { botNotification, sessionCompleteNotification } from '@/components/bot-notification/bot-notification';
 import ChartWrapper from '@/pages/chart/chart-wrapper';
 import './over-under-engine.scss';
 
@@ -24,9 +24,16 @@ const OVER_BARRIER  = '5';
 const UNDER_BARRIER = '4';
 const MAX_DIGITS    = 30;
 const DIGIT_WINDOW  = 1000;
+type MarketTradingMode = 'all' | 'selected';
 
 function isAlternatingMiddlePair(first: number | undefined, second: number | undefined): boolean {
     return (first === 4 && second === 5) || (first === 5 && second === 4);
+}
+
+function hasPowerEntrySequence(digits: number[]): boolean {
+    if (digits.length < 3) return false;
+    const lastThree = digits.slice(-3);
+    return lastThree.every(digit => digit < 4) || lastThree.every(digit => digit > 5);
 }
 
 export interface Market { symbol: string; label: string; short: string; code: string; }
@@ -299,6 +306,7 @@ const OverUnderEngine: React.FC = observer(() => {
 
     // Config
     const [stake, setStake]           = useState('0.5');
+    const [tradeDuration, setTradeDuration] = useState('1');
     // A multiplier of 1 keeps the next stake equal to the base stake.
     // Users can increase it explicitly for any selected strategy.
     const [martingale, setMartingale] = useState('1');
@@ -308,6 +316,7 @@ const OverUnderEngine: React.FC = observer(() => {
     const [bulkEnabled, setBulkEnabled] = useState(false);
     const [bulkCount, setBulkCount] = useState('3');
     const [symbol, setSymbol]         = useState('1HZ10V');
+    const [marketTradingMode, setMarketTradingMode] = useState<MarketTradingMode>('all');
     const [marketOpen, setMarketOpen] = useState(false);
     const [entryMode, setEntryMode]   = useState(false);
     const [powerEngineEnabled, setPowerEngineEnabled] = useState(false);
@@ -723,24 +732,27 @@ const OverUnderEngine: React.FC = observer(() => {
 
     const checkLimits = useCallback((): boolean => {
         const { totalProfit: profit, takeProfit: tp, stopLoss: sl } = eng.current;
+        const trades = eng.current.overSettledIds.length + eng.current.underSettledIds.length;
+        const won = eng.current.overWins + eng.current.underWins;
+        const lost = eng.current.overLosses + eng.current.underLosses;
         if (tp > 0 && profit >= tp) {
-            const amount = profit.toFixed(2);
-            botNotification(`🎉 Take profit reached — congratulations! You won ${amount}`, undefined, {
-                type: 'success',
-                position: toast.POSITION.TOP_CENTER,
-                autoClose: 8000,
-                className: 'ai-bots-limit-notification',
+            sessionCompleteNotification({
+                profit,
+                trades,
+                won,
+                lost,
+                reason: 'take-profit',
             });
-            stopEngine(`✅ Take Profit hit (+${amount})`);
+            stopEngine(`✅ Take Profit hit (+${profit.toFixed(2)})`);
             return true;
         }
         if (sl > 0 && profit <= -sl) {
-            const amount = Math.abs(profit).toFixed(2);
-            botNotification(`🛑 Stop loss reached — the session ended at -${amount}`, undefined, {
-                type: 'error',
-                position: toast.POSITION.TOP_CENTER,
-                autoClose: 8000,
-                className: 'ai-bots-limit-notification',
+            sessionCompleteNotification({
+                profit,
+                trades,
+                won,
+                lost,
+                reason: 'stop-loss',
             });
             stopEngine(`🛑 Stop Loss hit (${profit.toFixed(2)})`);
             return true;
@@ -786,7 +798,7 @@ const OverUnderEngine: React.FC = observer(() => {
                 basis: 'stake',
                 contract_type,
                 currency,
-                duration: 1,
+                duration: Number(tradeDuration),
                 duration_unit: 't',
                 ...(barrier ? { barrier } : {}),
                 underlying_symbol: symbolRef.current,
@@ -898,6 +910,18 @@ const OverUnderEngine: React.FC = observer(() => {
                 e.underSubId = r[0]?.subscription?.id ?? null;
             }
 
+            if (overIds.length === 0 && underIds.length === 0) {
+                e.roundInFlight = false;
+                e.powerAwaitingTrigger = e.powerEngineActive;
+                setStatusMsg(e.powerEngineActive
+                    ? '⚠ No contracts were opened — waiting for the next three-digit entry sequence.'
+                    : '⚠ No contracts were opened — retrying.');
+                if (!e.powerEngineActive) {
+                    setTimeout(() => { if (eng.current.running) fireRound(); }, 1500);
+                }
+                return;
+            }
+
             setStatusMsg(`Running — waiting for ${bulkTrades} bulk trade${bulkTrades > 1 ? 's' : ''} to settle…`);
         } catch (err: any) {
             const msg = err?.error?.message || err?.message || 'Buy failed';
@@ -905,9 +929,11 @@ const OverUnderEngine: React.FC = observer(() => {
             e.underSettled = true;
             e.roundInFlight = false;
             setStatusMsg(`⚠ ${msg}`);
-            setTimeout(() => { if (eng.current.running) fireRound(); }, 1500);
+            if (!e.powerEngineActive) {
+                setTimeout(() => { if (eng.current.running) fireRound(); }, 1500);
+            }
         }
-    }, [client, stakeValue, bulkEnabled, bulkCount]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [client, stakeValue, bulkEnabled, bulkCount, tradeDuration]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Keep fireRoundRef in sync so passiveSub's closure always calls the latest version
     useEffect(() => { fireRoundRef.current = fireRound; }, [fireRound]);
@@ -1051,11 +1077,16 @@ const OverUnderEngine: React.FC = observer(() => {
             if (checkLimits() || !e.running) return;
 
             if (e.powerEngineActive) {
-                // Power engine already rotated to the next market the instant
-                // the trade was fired. A completed 4→5 or 5→4 sequence arms
-                // the next tick on that market.
                 const sign = roundPnl >= 0 ? '+' : '';
                 setStatusMsg(`✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)}`);
+                e.powerAwaitingTrigger = true;
+                advanceMarketCycleRef.current();
+                const nextMarketShort = MARKETS[marketCycleIndexRef.current]?.short ?? symbolRef.current;
+                setStatusMsg(
+                    marketTradingMode === 'all'
+                        ? `✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)} — watching ${nextMarketShort}`
+                        : `✅ Round complete — P&L: ${sign}${roundPnl.toFixed(2)} | Total: ${sign}${e.totalProfit.toFixed(2)} — watching ${nextMarketShort} for 3 consecutive digits`
+                );
                 return;
             }
 
@@ -1074,7 +1105,7 @@ const OverUnderEngine: React.FC = observer(() => {
                 setTimeout(() => { if (eng.current.running) fireRoundRef.current(); }, 1500);
             }
         }
-    }, [checkLimits, stakeValue]);
+    }, [checkLimits, marketTradingMode, stakeValue]);
 
     // ── passive subscription: stream ticks as soon as a market is chosen ─────
 
@@ -1120,20 +1151,16 @@ const OverUnderEngine: React.FC = observer(() => {
                 const nextWindow = [...digitWindowRef.current, d].slice(-DIGIT_WINDOW);
                 digitWindowRef.current = nextWindow;
 
-                // The power engine arms on 4→5 or 5→4 and trades on the
-                // following digit.
+                // The power engine trades after three consecutive digits in
+                // either extreme group: 0–3 or 6–9.
                 if (eng.current.running && eng.current.powerEngineActive) {
-                    if (eng.current.powerAwaitingTrigger && !eng.current.roundInFlight && eng.current.dualEntryPending) {
-                        eng.current.dualEntryPending = false;
+                    if (!eng.current.roundInFlight && hasPowerEntrySequence(nextWindow)) {
                         eng.current.powerAwaitingTrigger = false;
+                        eng.current.entryDigit = d;
+                        setLastEntryDigit(d);
+                        setLastSkipReason(null);
+                        setStatusMsg(`⚡ Three consecutive ${d < 4 ? 'under 4' : 'over 5'} digits detected — opening trade…`);
                         fireRoundRef.current();
-                        advanceMarketCycleRef.current();
-                        eng.current.powerAwaitingTrigger = true;
-                    } else if (
-                        eng.current.powerAwaitingTrigger &&
-                        isAlternatingMiddlePair(nextWindow[nextWindow.length - 2], nextWindow[nextWindow.length - 1])
-                    ) {
-                        eng.current.dualEntryPending = true;
                     }
                     return;
                 }
@@ -1277,10 +1304,8 @@ const OverUnderEngine: React.FC = observer(() => {
             // arms the next live tick without executing immediately.
             if (latestHistoryDigit !== undefined && eng.current.running && !eng.current.roundInFlight) {
                 if (eng.current.powerEngineActive) {
-                    eng.current.dualEntryPending = isAlternatingMiddlePair(
-                        historyDigits[historyDigits.length - 2],
-                        historyDigits[historyDigits.length - 1]
-                    );
+                    eng.current.powerAwaitingTrigger = true;
+                    eng.current.dualEntryPending = false;
                 } else if (eng.current.useEntryMode && eng.current.waitingForEntry) {
                     const activeStrategyId = eng.current.strategyId;
                     const selectedStrategy = activeStrategyId === 'dual' || activeStrategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[activeStrategyId];
@@ -1345,12 +1370,13 @@ const OverUnderEngine: React.FC = observer(() => {
     // the take-profit/stop-loss threshold stops the engine (see checkLimits).
 
     const advanceMarketCycle = useCallback(() => {
+        if (marketTradingMode === 'selected') return;
         marketCycleIndexRef.current = (marketCycleIndexRef.current + 1) % MARKETS.length;
         const nextMarket = MARKETS[marketCycleIndexRef.current];
         symbolRef.current = nextMarket.symbol;
         setSymbol(nextMarket.symbol);
         startPassiveSub(nextMarket.symbol, true);
-    }, [startPassiveSub]);
+    }, [marketTradingMode, startPassiveSub]);
 
     useEffect(() => { advanceMarketCycleRef.current = advanceMarketCycle; }, [advanceMarketCycle]);
 
@@ -1366,13 +1392,27 @@ const OverUnderEngine: React.FC = observer(() => {
             setStatusMsg('⚠ Enter a whole number of bulk purchases before starting');
             return;
         }
+        if (!/^\d+$/.test(tradeDuration) || Number(tradeDuration) < 1) {
+            setStatusMsg('⚠ Enter a whole number of ticks between 1 and 365');
+            return;
+        }
+        if (Number(tradeDuration) > 365) {
+            setStatusMsg('⚠ Trade duration cannot exceed 365 ticks');
+            return;
+        }
         if (!api_base.api) { setStatusMsg('⚠ Not connected — please log in first'); return; }
 
-        // Every run starts the market cycle fresh from the first market in
-        // MARKETS — one trade per market, then rotates through the rest.
-        marketCycleIndexRef.current = 0;
-        symbolRef.current = MARKETS[0].symbol;
-        setSymbol(MARKETS[0].symbol);
+        // All-markets mode starts from the first market and rotates through the
+        // list. Selected-market mode keeps the market chosen in the header.
+        if (marketTradingMode === 'all') {
+            marketCycleIndexRef.current = 0;
+            symbolRef.current = MARKETS[0].symbol;
+            setSymbol(MARKETS[0].symbol);
+        } else {
+            const selectedIndex = MARKETS.findIndex(market => market.symbol === symbol);
+            marketCycleIndexRef.current = selectedIndex >= 0 ? selectedIndex : 0;
+            symbolRef.current = symbol;
+        }
 
         const resolvedStrategy = strategyId === 'dual' || strategyId === 'confidence' ? null : STRATEGY_DEFINITIONS[strategyId];
         // Hidden power-engine trigger: Over 5 / Under 4 card only. When active,
@@ -1471,7 +1511,7 @@ const OverUnderEngine: React.FC = observer(() => {
         } catch (err: any) {
             stopEngine(`⚠ ${err?.error?.message || err?.message || 'Failed to start'}`);
         }
-    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, strategyId, powerEngineEnabled, bulkEnabled, bulkCount, fireRound, onSettled, startPassiveSub, stopEngine, transactions, run_panel, summary_card, ui]);
+    }, [stakeValue, martingaleValue, martingaleEnabled, takeProfitValue, stopLossValue, entryMode, strategyId, powerEngineEnabled, bulkEnabled, bulkCount, fireRound, marketTradingMode, onSettled, startPassiveSub, stopEngine, symbol, transactions, run_panel, summary_card, ui]);
 
     // Start passive ticks whenever the selected symbol changes (or on first
     // mount). The engine can render before authentication finishes, so retry
@@ -1613,21 +1653,6 @@ const OverUnderEngine: React.FC = observer(() => {
                                 <span className='oue__strategy-card-description'>Trade both sides of the digit range with the original paired AI bot.</span>
                             </span>
                             <span className='oue__strategy-card-action'>OPEN</span>
-                        </button>
-                        <button
-                            type='button'
-                            role='listitem'
-                            className='oue__strategy-card oue__strategy-card--new'
-                            aria-label='Open Higher Lower chart workspace'
-                            onClick={() => setHigherLowerSelected(true)}
-                        >
-                            <span className='oue__strategy-card-badge'>↕</span>
-                            <span className='oue__strategy-card-content'>
-                                <span className='oue__strategy-card-title'>HIGHER / LOWER</span>
-                                <span className='oue__strategy-card-meta'>HIGHER + LOWER · NEW</span>
-                                <span className='oue__strategy-card-description'>A separate higher/lower trading strategy workspace.</span>
-                            </span>
-                            <span className='oue__strategy-card-action'>COMING SOON</span>
                         </button>
                         <button
                             type='button'
@@ -1887,11 +1912,21 @@ const OverUnderEngine: React.FC = observer(() => {
                             onClick={openMarket}
                             disabled={isRunning}
                             type='button'
-                            title={isRunning ? 'Cycling through all markets — one trade per market' : 'Change market'}
+                            title={
+                                isRunning && marketTradingMode === 'all'
+                                    ? 'Cycling through all markets — one trade per market'
+                                    : 'Change market'
+                            }
                         >
                             {isRunning && <span className='oue__entry-pulse' aria-hidden='true' />}
-                            <span className='oue__market-trigger-short'>
-                                {isRunning ? '🔄 ' : ''}{MARKETS.find(m => m.symbol === symbol)?.short ?? symbol}
+                            <span className='oue__market-trigger-badge' aria-hidden='true'>
+                                {activeMarket.code.split('\n')[0]}
+                            </span>
+                            <span className='oue__market-trigger-copy'>
+                                <span className='oue__market-trigger-label'>Market</span>
+                                <span className='oue__market-trigger-short'>
+                                    {isRunning ? '↻ ' : ''}{activeMarket.short}
+                                </span>
                             </span>
                             <span className={`oue__market-chevron${marketOpen ? ' oue__market-chevron--open' : ''}`}>▼</span>
                         </button>
@@ -2145,7 +2180,62 @@ const OverUnderEngine: React.FC = observer(() => {
 
             {/* ── controls ── */}
             <div className='oue__controls'>
+                <fieldset className='oue__market-mode'>
+                    <legend>Markets to trade</legend>
+                    <label className={`oue__market-mode-option${marketTradingMode === 'all' ? ' oue__market-mode-option--active' : ''}`}>
+                        <input
+                            type='radio'
+                            name='market-trading-mode'
+                            value='all'
+                            checked={marketTradingMode === 'all'}
+                            onChange={() => setMarketTradingMode('all')}
+                            disabled={isRunning}
+                        />
+                        <span className='oue__market-mode-option-icon' aria-hidden='true'>↻</span>
+                        <span className='oue__market-mode-option-copy'>
+                            <strong>All markets</strong>
+                            <small>Rotate through every market</small>
+                        </span>
+                    </label>
+                    <label className={`oue__market-mode-option${marketTradingMode === 'selected' ? ' oue__market-mode-option--active' : ''}`}>
+                        <input
+                            type='radio'
+                            name='market-trading-mode'
+                            value='selected'
+                            checked={marketTradingMode === 'selected'}
+                            onChange={() => setMarketTradingMode('selected')}
+                            disabled={isRunning}
+                        />
+                        <span className='oue__market-mode-option-icon' aria-hidden='true'>◎</span>
+                        <span className='oue__market-mode-option-copy'>
+                            <strong>Selected market</strong>
+                            <small>Stay on {activeMarket.short}</small>
+                        </span>
+                    </label>
+                    <small>
+                        {marketTradingMode === 'all'
+                            ? 'The engine rotates through every market after each round.'
+                            : `The engine stays on ${activeMarket.short} until you stop it.`}
+                    </small>
+                </fieldset>
                 <div className='oue__config'>
+                    <label className='oue__field'>
+                        <span>Trade duration (ticks)</span>
+                        <input
+                            type='number'
+                            min='1'
+                            max='365'
+                            step='1'
+                            value={tradeDuration}
+                            onChange={e => setTradeDuration(e.target.value)}
+                            disabled={isRunning}
+                            className='oue__input'
+                            aria-describedby='oue-trade-duration-help'
+                        />
+                        <small id='oue-trade-duration-help' className='oue__field-help'>
+                            Each contract stays open for this many ticks.
+                        </small>
+                    </label>
                     <label className='oue__field'>
                         <span>Stake ({currency})</span>
                         <input

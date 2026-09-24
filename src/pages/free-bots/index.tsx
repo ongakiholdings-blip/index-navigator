@@ -19,17 +19,23 @@ const LoadBotIcon = () => (
     </svg>
 );
 
-type MiniTab = 'NORMAL' | 'PREMIUM' | 'CLASSICS';
+type MiniTab = 'POPULAR' | 'NORMAL' | 'PREMIUM' | 'CLASSICS' | 'BOT STORE';
 
-const MINI_TABS: MiniTab[] = ['NORMAL', 'PREMIUM', 'CLASSICS'];
+const MINI_TABS: MiniTab[] = ['POPULAR', 'NORMAL', 'PREMIUM', 'CLASSICS', 'BOT STORE'];
 
 const TAB_LABELS: Record<MiniTab, string> = {
+    POPULAR: 'POPULAR',
     NORMAL: 'NORMAL',
     PREMIUM: 'PREMIUM',
     CLASSICS: 'CLASSICS',
+    'BOT STORE': 'BOT STORE',
 };
 
 const TAB_CONFIG: Record<MiniTab, { badge: string; cardBorder: string }> = {
+    POPULAR: {
+        badge: '🔥',
+        cardBorder: 'linear-gradient(135deg, #fb7185 0%, #f97316 50%, #facc15 100%)',
+    },
     NORMAL: {
         badge: '📊',
         cardBorder: 'linear-gradient(135deg, #f7c53b 0%, #3b82f6 50%, #f7c53b 100%)',
@@ -41,6 +47,10 @@ const TAB_CONFIG: Record<MiniTab, { badge: string; cardBorder: string }> = {
     CLASSICS: {
         badge: '🏛️',
         cardBorder: 'linear-gradient(135deg, #cd7f32 0%, #8b4513 50%, #cd7f32 100%)',
+    },
+    'BOT STORE': {
+        badge: '🛒',
+        cardBorder: 'linear-gradient(135deg, #38bdf8 0%, #6366f1 50%, #a78bfa 100%)',
     },
 };
 
@@ -235,6 +245,15 @@ const FREE_BOTS: BotEntry[] = [
         difficulty: 'Advanced',
     },
 ];
+
+const POPULAR_BOT_IDS = new Set([
+    'default_navigator',
+    'speed_bot',
+    'dominator',
+    'even_odd_switcher',
+    'under_8_pro_v1',
+    'digit_eliminator',
+]);
 // ─────────────────────────────────────────────────────────────────────────────
 
 const FreeBots = observer(() => {
@@ -287,7 +306,12 @@ const FreeBots = observer(() => {
         }
     };
 
-    const visible_bots = FREE_BOTS.filter(bot => bot.tab === activeTab);
+    const visible_bots =
+        activeTab === 'POPULAR'
+            ? FREE_BOTS.filter(bot => POPULAR_BOT_IDS.has(bot.id))
+            : activeTab === 'BOT STORE'
+                ? []
+            : FREE_BOTS.filter(bot => bot.tab === activeTab);
 
     return (
         <div className='free-bots'>
@@ -295,8 +319,9 @@ const FreeBots = observer(() => {
                 {MINI_TABS.map(tab => (
                     <button
                         key={tab}
-                        className={`free-bots__mini-tab${activeTab === tab ? ' free-bots__mini-tab--active' : ''}`}
+                        className={`free-bots__mini-tab free-bots__mini-tab--${tab.toLowerCase()}${activeTab === tab ? ' free-bots__mini-tab--active' : ''}`}
                         onClick={() => setActiveTab(tab)}
+                        aria-pressed={activeTab === tab}
                     >
                         <span className='free-bots__mini-tab-badge'>{TAB_CONFIG[tab].badge}</span>
                         {TAB_LABELS[tab]}

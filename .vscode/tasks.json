@@ -1,0 +1,257 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start local dev server",
+			"type": "shell",
+			"command": "npm install --no-fund --no-audit && npm run dev",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Start local dev server",
+			"type": "shell",
+			"command": "npm install --no-fund --no-audit; if ($?) { npm run dev }",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Install dependencies",
+			"type": "shell",
+			"command": "npm install --no-fund --no-audit",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Install from npm registry",
+			"type": "shell",
+			"command": "npm install --registry=https://registry.npmjs.org/ --no-fund --no-audit",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check npm config",
+			"type": "shell",
+			"command": "npm config list",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run app dev server",
+			"type": "shell",
+			"command": "npm run dev",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Serve project on port 5000",
+			"type": "shell",
+			"command": "python -m http.server 5000",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Serve project on port 5000",
+			"type": "shell",
+			"command": "py -m http.server 5000",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect built output",
+			"type": "shell",
+			"command": "node -e \"const fs=require('fs'); console.log(fs.readdirSync('.')); console.log('dist:', fs.existsSync('dist') ? fs.readdirSync('dist') : 'missing');\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect built output",
+			"type": "shell",
+			"command": "node -e 'const fs=require(\"fs\"); console.log(fs.readdirSync(\".\")); console.log(\"dist:\", fs.existsSync(\"dist\") ? fs.readdirSync(\"dist\") : \"missing\");'",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect built output",
+			"type": "shell",
+			"command": "node -p \"require('fs').readdirSync('.').join('\\n')\"; node -p \"require('fs').existsSync('dist') ? 'dist exists' : 'dist missing'\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check Node version",
+			"type": "shell",
+			"command": "node -v",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "List root files",
+			"type": "shell",
+			"command": "node -p \"require('fs').readdirSync('.').join('\\n')\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test node expression",
+			"type": "shell",
+			"command": "node -p '1+1'",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "List root files",
+			"type": "shell",
+			"command": "node -p 'require(\"fs\").readdirSync(\".\").join(\"\\n\")'",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check project files",
+			"type": "shell",
+			"command": "node .\\tmp_list.js",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check project files",
+			"type": "shell",
+			"command": "node .\\tmp_list.js",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "List dist asset folders",
+			"type": "shell",
+			"command": "node -e \"import fs from 'node:fs'; const dirs=['dist/assets','dist/assets/icons','dist/assets/images','dist/assets/media','dist/assets/videos']; for (const d of dirs) { console.log('DIR', d, fs.existsSync(d) ? fs.readdirSync(d) : 'missing'); }\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "List dist assets",
+			"type": "shell",
+			"command": "node .\\tmp_check.js",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Start static preview server",
+			"type": "shell",
+			"command": "node .\\serve.js",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Serve app on port 4003",
+			"type": "shell",
+			"command": "node -e \"import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; const root=process.cwd(); const port=4003; const mime={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.mjs':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.webp':'image/webp','.mp4':'video/mp4','.mp3':'audio/mpeg','.wav':'audio/wav','.ogg':'audio/ogg','.ico':'image/x-icon','.txt':'text/plain; charset=utf-8'}; const server=http.createServer((req,res)=>{ const reqPath = (req.url||'/').split('?')[0]; const filePath = reqPath === '/' ? path.join(root,'index.html') : path.join(root, reqPath.replace(/^\\/+/, '')); if (!filePath.startsWith(root)) { res.writeHead(403); res.end('Forbidden'); return; } fs.stat(filePath,(err,stats)=>{ if (err || !stats.isFile()) { const fallback = path.join(root,'index.html'); fs.readFile(fallback,(e,content)=>{ if (e) { res.writeHead(404); res.end('Not found'); return; } res.writeHead(200, {'Content-Type':'text/html; charset=utf-8'}); res.end(content); }); return; } const ext = path.extname(filePath).toLowerCase(); res.writeHead(200, {'Content-Type': mime[ext] || 'application/octet-stream'}); fs.createReadStream(filePath).pipe(res); });}); server.listen(port,'0.0.0.0',()=>console.log('Server running at http://localhost:'+port));\"",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Serve app on port 4003",
+			"type": "shell",
+			"command": "$env:PORT = '4003'; node .\\serve.js",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run app on port 4003",
+			"type": "shell",
+			"command": "cmd /c .\\run-4003.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Clean temporary files",
+			"type": "shell",
+			"command": "cmd /c del /q .\\tmp_list.js .\\tmp_check.js",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check registry env",
+			"type": "shell",
+			"command": "cmd /c \"set | findstr /I \\\"npm\\|registry\\|package-firewall\\\"\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect npm config values",
+			"type": "shell",
+			"command": "cmd /c \"npm config get registry && npm config get package-firewall && npm config get @npm:registry\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect npm config values",
+			"type": "shell",
+			"command": "cmd /c \"npm config get registry; npm config get package-firewall; npm config get @npm:registry\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect npm config values",
+			"type": "shell",
+			"command": "npm config get registry; npm config get package-firewall; npm config get @npm:registry",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect npm config",
+			"type": "shell",
+			"command": "npm config ls -l",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect relevant environment variables",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Get-ChildItem Env:* | Where-Object { $_.Name -match 'npm|proxy|http|https|package|replit' -or $_.Value -match 'package-firewall|replit|proxy' } | Sort-Object Name | Format-Table -AutoSize\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Find npmrc files",
+			"type": "shell",
+			"command": "Get-ChildItem -Path 'C:\\Users\\alexo' -Recurse -File -Filter '.npmrc' -ErrorAction SilentlyContinue; Get-ChildItem -Path 'C:\\index' -Recurse -File -Filter '.npmrc' -ErrorAction SilentlyContinue",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test npm registry reachability",
+			"type": "shell",
+			"command": "curl -I https://registry.npmjs.org/",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test npm registry reachability",
+			"type": "shell",
+			"command": "curl.exe -I https://registry.npmjs.org/",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test npm registry reachability",
+			"type": "shell",
+			"command": "powershell -NoProfile -Command \"Invoke-WebRequest -Uri 'https://registry.npmjs.org/' -Method Head | Select-Object StatusCode,StatusDescription,Headers\"",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Reset lockfile and reinstall dependencies",
+			"type": "shell",
+			"command": "cmd /c \"del /q package-lock.json & npm install --no-fund --no-audit\"",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Reset lockfile and reinstall dependencies",
+			"type": "shell",
+			"command": "Remove-Item package-lock.json -Force; npm install --no-fund --no-audit",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

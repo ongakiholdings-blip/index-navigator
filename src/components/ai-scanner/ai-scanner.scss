@@ -1055,3 +1055,115 @@
     border-top-color: #0f172a;
     box-shadow: 0 0 6px rgb(214 179 90 / 45%);
 }
+
+// ─── System UI theme ─────────────────────────────────────────────────────────
+.ai-scanner-trigger {
+    width: 4.25rem;
+    height: 4.25rem;
+    border: 1px solid rgb(103 232 249 / 62%);
+    background:
+        linear-gradient(145deg, rgb(8 47 73 / 98%), rgb(3 18 40 / 98%)),
+        url('../../assets/free-bots-wallpaper.jpeg') center / cover;
+    box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 45%), 0 0 1.2rem rgb(34 211 238 / 35%);
+
+    span:not(.ai-scanner-trigger__wave) {
+        color: #a5f3fc;
+        font-size: 1.15rem;
+        font-style: normal;
+        letter-spacing: 0.08em;
+        text-shadow: 0 0 0.7rem rgb(103 232 249 / 85%);
+    }
+
+    &:hover,
+    &--active {
+        border-color: #67e8f9;
+        box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 55%), 0 0 2rem rgb(34 211 238 / 65%);
+    }
+
+    &__dot { border-color: #06172d; }
+    &__wave { border-color: rgb(103 232 249 / 62%); }
+}
+
+.ai-scanner-modal {
+    overflow: hidden;
+    border: 1px solid rgb(103 232 249 / 45%);
+    border-radius: 0.85rem;
+    background:
+        linear-gradient(145deg, rgb(7 35 62 / 98%), rgb(3 14 30 / 99%)),
+        url('../../assets/free-bots-wallpaper.jpeg') center / cover;
+    color: #dffaff;
+    font-style: normal;
+    box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 58%), 0 0 2rem rgb(34 211 238 / 16%);
+
+    p, span, strong, label, div, button {
+        color: inherit !important;
+        font-style: normal;
+    }
+
+    input, select, option {
+        border-color: rgb(103 232 249 / 28%);
+        background: rgb(4 25 49 / 92%);
+        color: #ecfeff !important;
+        font-weight: 600;
+    }
+
+    &__header {
+        background: linear-gradient(110deg, rgb(8 47 73 / 96%), rgb(7 35 62 / 96%));
+        border-bottom: 1px solid rgb(103 232 249 / 24%);
+        h3 {
+            color: #a5f3fc !important;
+            font-style: normal;
+            text-shadow: 0 0 0.7rem rgb(34 211 238 / 35%);
+        }
+    }
+
+    &__close {
+        border-color: rgb(103 232 249 / 35%);
+        background: rgb(4 25 49 / 75%);
+        color: #a5f3fc !important;
+        &:hover { background: rgb(34 211 238 / 20%); border-color: #67e8f9; }
+    }
+
+    &__mode-bar,
+    &__description { background: rgb(4 25 49 / 72%); }
+
+    &__mode-btn {
+        border-color: rgb(103 232 249 / 28%);
+        background: rgb(8 47 73 / 45%);
+        color: #9cc7dc !important;
+        &:hover:not(:disabled) { background: rgb(34 211 238 / 16%); border-color: #67e8f9; }
+        &--active,
+        &--evenodd#{&}--active {
+            border-color: #67e8f9;
+            background: rgb(34 211 238 / 20%);
+            color: #ecfeff !important;
+            box-shadow: 0 0 0.8rem rgb(34 211 238 / 18%);
+        }
+    }
+
+    &__best-card {
+        border-color: rgb(103 232 249 / 24%);
+        background: rgb(4 25 49 / 70%);
+        &--active { border-color: rgb(103 232 249 / 58%); background: rgb(8 47 73 / 75%); }
+    }
+
+    &__btn {
+        color: #ecfeff !important;
+        &--scan,
+        &--success {
+            background: linear-gradient(135deg, #1595e8, #1769b0) !important;
+            box-shadow: 0 0.25rem 1rem rgb(21 149 232 / 28%);
+        }
+        &--primary,
+        &--secondary {
+            background: rgb(8 47 73 / 72%);
+            border-color: rgb(103 232 249 / 32%);
+        }
+    }
+}
+
+.ai-scanner-spinner {
+    border-color: rgb(103 232 249 / 20%);
+    border-top-color: #67e8f9;
+    box-shadow: 0 0 0.5rem rgb(34 211 238 / 45%);
+}

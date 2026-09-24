@@ -3,7 +3,6 @@ import useThemeSwitcher from '@/hooks/useThemeSwitcher';
 import RootStore from '@/stores/root-store';
 import { LegacyLogout1pxIcon, LegacyTheme1pxIcon } from '@deriv/quill-icons/Legacy';
 import { useTranslations } from '@deriv-com/translations';
-import { ToggleSwitch } from '@deriv-com/ui';
 
 // ─── Community / Support Links ───────────────────────────────────────────────
 // Update these URLs to point to your WhatsApp group and Telegram channel.
@@ -60,6 +59,9 @@ type TMenuConfig = {
     submenu?: TSubmenuSection;
     target?: ComponentProps<'a'>['target'];
     isActive?: boolean;
+    appearance?: boolean;
+    theme?: 'light' | 'dark';
+    variant?: 'logout';
 }[];
 
 const useMobileMenuConfig = (
@@ -68,7 +70,7 @@ const useMobileMenuConfig = (
     enableThemeToggle: boolean = true
 ) => {
     const { localize } = useTranslations();
-    const { is_dark_mode_on, toggleTheme } = useThemeSwitcher();
+    const { is_dark_mode_on } = useThemeSwitcher();
 
     const menuConfig = useMemo((): TMenuConfig[] => {
 
@@ -116,7 +118,8 @@ const useMobileMenuConfig = (
                     as: 'button',
                     label: localize('Dark theme'),
                     LeftComponent: LegacyTheme1pxIcon,
-                    RightComponent: <ToggleSwitch value={is_dark_mode_on} onChange={toggleTheme} />,
+                    appearance: true,
+                    theme: is_dark_mode_on ? 'dark' : 'light',
                 },
             ].filter(Boolean) as TMenuConfig,
             [
@@ -127,6 +130,7 @@ const useMobileMenuConfig = (
                         LeftComponent: LegacyLogout1pxIcon,
                         onClick: onLogout,
                         removeBorderBottom: true,
+                        variant: 'logout',
                     },
             ].filter(Boolean) as TMenuConfig,
         ].filter(section => section.length > 0);
@@ -134,7 +138,6 @@ const useMobileMenuConfig = (
         client,
         onLogout,
         is_dark_mode_on,
-        toggleTheme,
         localize,
         enableThemeToggle, // [AI] Added to recalculate menu when theme toggle config changes
     ]);

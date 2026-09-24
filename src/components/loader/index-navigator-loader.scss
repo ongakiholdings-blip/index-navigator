@@ -6,9 +6,8 @@
 
     align-items: center;
     background:
-        radial-gradient(circle at 50% 43%, rgb(53 215 208 / 18%), transparent 22rem),
-        radial-gradient(circle at 86% 12%, rgb(247 197 59 / 12%), transparent 20rem),
-        var(--loader-ink);
+        linear-gradient(180deg, rgb(1 12 27 / 28%), rgb(1 8 20 / 58%)),
+        url('../../assets/free-bots-wallpaper.jpeg') center / cover no-repeat;
     color: #d6ffff;
     display: flex;
     inset: 0;

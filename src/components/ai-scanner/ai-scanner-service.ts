@@ -2,12 +2,11 @@
  * AI Scanner Service
  *
  * Connects to the Deriv WebSocket API, fetches tick history for each
- * synthetic-digits market, and scores them for the strongest signal across
- * all contract types (Over/Under + Even/Odd).
+ * synthetic-digits market, and scores every valid strategy in the selected
+ * contract family.
  *
- * Priority: 1s volatilities are preferred when they show a meaningful edge
- * (score >= MIN_1S_SCORE).  Plain volatilities are the fallback.
- * Each volatility appears only once in the output.
+ * Every requested standard, 1-second, and Jump market is evaluated. The
+ * highest-scoring market is returned as the single recommendation.
  */
 import DerivAPIBasic from '@deriv/deriv-api/dist/DerivAPIBasic';
 import { getSocketURL } from '@/components/shared';
@@ -15,14 +14,18 @@ import { getSocketURL } from '@/components/shared';
 // ─── constants ────────────────────────────────────────────────────────────────
 
 /**
- * Symbols ordered so 1s volatilities come first — the priority group is
- * evaluated before plain volatilities when breaking ties.
+ * Symbols are grouped by market family for progress reporting. Selection is
+ * global across the complete list; ordering is only used for deterministic
+ * ties.
  */
 export const SCAN_SYMBOLS_1S = [
     { symbol: '1HZ10V',  name: 'Volatility 10 (1s)',  is1s: true  },
+    { symbol: '1HZ15V',  name: 'Volatility 15 (1s)',  is1s: true  },
     { symbol: '1HZ25V',  name: 'Volatility 25 (1s)',  is1s: true  },
+    { symbol: '1HZ30V',  name: 'Volatility 30 (1s)',  is1s: true  },
     { symbol: '1HZ50V',  name: 'Volatility 50 (1s)',  is1s: true  },
     { symbol: '1HZ75V',  name: 'Volatility 75 (1s)',  is1s: true  },
+    { symbol: '1HZ90V',  name: 'Volatility 90 (1s)',  is1s: true  },
     { symbol: '1HZ100V', name: 'Volatility 100 (1s)', is1s: true  },
 ];
 
@@ -32,29 +35,23 @@ export const SCAN_SYMBOLS_PLAIN = [
     { symbol: 'R_50',    name: 'Volatility 50',       is1s: false },
     { symbol: 'R_75',    name: 'Volatility 75',       is1s: false },
     { symbol: 'R_100',   name: 'Volatility 100',      is1s: false },
+    { symbol: 'JD10',    name: 'Jump 10',              is1s: false },
+    { symbol: 'JD25',    name: 'Jump 25',              is1s: false },
+    { symbol: 'JD50',    name: 'Jump 50',              is1s: false },
+    { symbol: 'JD75',    name: 'Jump 75',              is1s: false },
+    { symbol: 'JD100',   name: 'Jump 100',             is1s: false },
 ];
 
 /** All symbols: 1s first, then plain — preserves priority ordering. */
 export const SCAN_SYMBOLS = [...SCAN_SYMBOLS_1S, ...SCAN_SYMBOLS_PLAIN];
 
-/**
- * Minimum absolute-score edge for a 1s volatility to be considered "fit".
- * Below this threshold the 1s group is skipped and the best plain volatility
- * is returned instead.  ~1.5% edge above the theoretical baseline.
- */
-const MIN_1S_SCORE = 0.015;
-
 // ─── types ────────────────────────────────────────────────────────────────────
 
 /** Which contract-type group the winning signal belongs to. */
-export type ContractGroup = 'overunder' | 'evenodd';
+export type ContractGroup = 'overunder' | 'evenodd' | 'risefall' | 'matchesdiffers';
 
-/**
- * Scan mode:
- *  - 'auto'    — evaluates all contract types and returns the strongest signal.
- *  - 'evenodd' — forces Even/Odd evaluation only; ignores Over/Under entirely.
- */
-export type ScanMode = 'auto' | 'evenodd';
+/** Contract families scanned by the dedicated Scanner tab. */
+export type ScanMode = 'overunder1' | 'overunder2' | 'overunder' | 'evenodd' | 'risefall' | 'matchesdiffers';
 
 export type ScanResult = {
     symbol: string;
@@ -144,13 +141,12 @@ function scoreOverUnder(
     digits: number[],
     overThreshold: number,
     underThreshold: number,
-    baseline: number
 ): { score: number; tradeType: string; percentage: string } {
     const total     = digits.length;
     const overRate  = digits.filter(d => d > overThreshold).length  / total;
     const underRate = digits.filter(d => d < underThreshold).length / total;
-    const overEdge  = overRate  - baseline;
-    const underEdge = underRate - baseline;
+    const overEdge  = overRate - ((9 - overThreshold) / 10);
+    const underEdge = underRate - (underThreshold / 10);
     if (overEdge >= underEdge) {
         return {
             score:      Math.abs(overEdge),
@@ -165,57 +161,58 @@ function scoreOverUnder(
     };
 }
 
-/**
- * Evaluates ALL contract types for a digit stream and returns the single
- * strongest signal, with its associated contract group.
- *
- * Candidates evaluated:
- *   - Over 1 / Under 8  (80% baseline)
- *   - Over 2 / Under 7  (70% baseline)
- *   - Over 3 / Under 6  (60% baseline)
- *   - Even / Odd        (50% baseline, contrarian)
- */
-function scoreMarketUnified(digits: number[]): {
+function scoreMarketFamily(digits: number[], prices: number[], mode: ScanMode): {
     score: number;
     tradeType: string;
     percentage: string;
     contractGroup: ContractGroup;
     entryPoint?: number;
 } {
-    const total = digits.length;
-    if (total === 0) {
-        return { score: 0, tradeType: '', percentage: '0%', contractGroup: 'overunder' };
+    if (!digits.length) return { score: 0, tradeType: '', percentage: '0%', contractGroup: 'overunder' };
+
+    const candidates: Array<{
+        score: number; tradeType: string; percentage: string;
+        contractGroup: ContractGroup; entryPoint?: number;
+    }> = [];
+
+    if (mode === 'overunder' || mode === 'overunder1' || mode === 'overunder2') {
+        const pairs = mode === 'overunder1'
+            ? [[1, 8]]
+            : mode === 'overunder2'
+                ? [[2, 7]]
+                : [[1, 8], [2, 7], [3, 6], [4, 5]];
+        pairs.forEach(([over, under]) => {
+            const scored = scoreOverUnder(digits, over, under);
+            candidates.push({ ...scored, contractGroup: 'overunder', entryPoint: computeEntryPoint(digits, scored.tradeType) });
+        });
+    } else if (mode === 'evenodd') {
+        const evenRate = digits.filter(digit => digit % 2 === 0).length / digits.length;
+        const oddRate = 1 - evenRate;
+        candidates.push(
+            { score: Math.abs(evenRate - 0.5), tradeType: 'Even', percentage: `${(evenRate * 100).toFixed(1)}%`, contractGroup: 'evenodd' },
+            { score: Math.abs(oddRate - 0.5), tradeType: 'Odd', percentage: `${(oddRate * 100).toFixed(1)}%`, contractGroup: 'evenodd' }
+        );
+    } else if (mode === 'risefall') {
+        const changes = prices.slice(1).map((price, index) => price >= prices[index]);
+        const riseRate = changes.filter(Boolean).length / Math.max(1, changes.length);
+        const fallRate = 1 - riseRate;
+        candidates.push(
+            { score: Math.abs(riseRate - 0.5), tradeType: 'Rise', percentage: `${(riseRate * 100).toFixed(1)}%`, contractGroup: 'risefall' },
+            { score: Math.abs(fallRate - 0.5), tradeType: 'Fall', percentage: `${(fallRate * 100).toFixed(1)}%`, contractGroup: 'risefall' }
+        );
+    } else {
+        const counts = buildDigitCounts(digits);
+        counts.forEach((count, barrier) => {
+            const matchesRate = count / digits.length;
+            const differsRate = 1 - matchesRate;
+            candidates.push(
+                { score: Math.abs(matchesRate - 0.1), tradeType: `Matches ${barrier}`, percentage: `${(matchesRate * 100).toFixed(1)}%`, contractGroup: 'matchesdiffers', entryPoint: barrier },
+                { score: Math.abs(differsRate - 0.9), tradeType: `Differs ${barrier}`, percentage: `${(differsRate * 100).toFixed(1)}%`, contractGroup: 'matchesdiffers', entryPoint: barrier }
+            );
+        });
     }
 
-    // ── Over/Under candidates ────────────────────────────────────────────────
-    const ou1 = scoreOverUnder(digits, 1, 8, 0.8);
-    const ou2 = scoreOverUnder(digits, 2, 7, 0.7);
-    const ou3 = scoreOverUnder(digits, 3, 6, 0.6);
-    const bestOU = [ou1, ou2, ou3].reduce((a, b) => b.score > a.score ? b : a);
-
-    // ── Even/Odd candidate ───────────────────────────────────────────────────
-    // Score = deviation from the 50% baseline (same scale as OU scores).
-    // Contrarian: bet against the dominant direction (mean-reversion pattern).
-    const evenCount  = digits.filter(d => d % 2 === 0).length;
-    const evenPct    = evenCount / total;
-    const oddPct     = 1 - evenPct;
-    const dominantPct = Math.max(evenPct, oddPct);
-    const eoEdge     = dominantPct - 0.5;  // deviation from baseline — comparable to OU scores
-    const eoTradeType = evenPct > oddPct ? 'Odd' : 'Even';  // bet against dominant direction
-
-    // ── Pick strongest (both scores are now absolute deviations from baseline) ─
-    const ouWins = bestOU.score >= eoEdge;
-    if (ouWins) {
-        const entryPoint = computeEntryPoint(digits, bestOU.tradeType);
-        return { ...bestOU, contractGroup: 'overunder', entryPoint };
-    }
-
-    return {
-        score:         eoEdge,
-        tradeType:     eoTradeType,
-        percentage:    `${(dominantPct * 100).toFixed(1)}%`,
-        contractGroup: 'evenodd',
-    };
+    return candidates.reduce((best, candidate) => candidate.score > best.score ? candidate : best);
 }
 
 // ─── WebSocket connection helper ──────────────────────────────────────────────
@@ -250,39 +247,13 @@ function openConnection(wsURL: string, timeoutMs = 15_000): Promise<{
 // ─── main scan ────────────────────────────────────────────────────────────────
 
 /**
- * Scores a digit stream for Even/Odd only.
- * Returns the deviation from the 50% baseline (same scale as OU scores).
- * Direction is contrarian — bets against the dominant side.
- */
-function scoreMarketEvenOdd(digits: number[]): {
-    score: number; tradeType: string; percentage: string;
-    contractGroup: ContractGroup; entryPoint?: number;
-} {
-    const total = digits.length;
-    if (total === 0) return { score: 0, tradeType: 'Even', percentage: '50.0%', contractGroup: 'evenodd' };
-    const evenPct     = digits.filter(d => d % 2 === 0).length / total;
-    const oddPct      = 1 - evenPct;
-    const dominantPct = Math.max(evenPct, oddPct);
-    return {
-        score:         dominantPct - 0.5,
-        tradeType:     evenPct > oddPct ? 'Odd' : 'Even',   // bet against dominant
-        percentage:    `${(dominantPct * 100).toFixed(1)}%`,
-        contractGroup: 'evenodd',
-    };
-}
-
-/**
  * Scans all synthetic-digit markets and returns a single recommended outcome.
  *
- * mode = 'auto'    → evaluates Over/Under (all thresholds) AND Even/Odd for
- *                    every symbol, returns the single strongest signal.
- * mode = 'evenodd' → forces Even/Odd evaluation only across all symbols.
+ * The dedicated 'overunder' mode evaluates all supported Over/Under pairs.
+ * The legacy overunder1 and overunder2 modes remain available to the floating
+ * scanner and evaluate their specific pair.
  *
- * Priority rule (both modes):
- *   1. Best 1s volatility is used when its score >= MIN_1S_SCORE.
- *   2. Otherwise fall back to the best plain volatility.
- *
- * Each volatility appears exactly once in the output.
+ * The best result is selected globally across the complete market list.
  */
 export async function scanMarkets(
     mode: ScanMode,
@@ -314,10 +285,8 @@ export async function scanMarkets(
                 const prices: number[] = response?.history?.prices ?? [];
                 const digits      = prices.map(p => getLastDigit(p));
                 const digitCounts = buildDigitCounts(digits);
-
-                const scored = mode === 'evenodd'
-                    ? scoreMarketEvenOdd(digits)
-                    : scoreMarketUnified(digits);
+                const numericPrices = prices.map(Number).filter(Number.isFinite);
+                const scored = scoreMarketFamily(digits, numericPrices, mode);
 
                 const result: ScanResult = {
                     symbol, name, is1s, digitCounts,
@@ -343,15 +312,15 @@ export async function scanMarkets(
     results1s.sort((a, b) => b.score - a.score);
     resultsPlain.sort((a, b) => b.score - a.score);
 
-    // Priority: 1s wins when its best score clears the minimum edge threshold
-    const best1s    = results1s[0]    ?? null;
-    const bestPlain = resultsPlain[0] ?? null;
-
-    const used1s = !!(best1s && best1s.score >= MIN_1S_SCORE);
-    const best   = used1s ? best1s! : (bestPlain ?? best1s!);
-
-    // 1s first, then plain — no duplicates
+    // Choose one best market from the complete requested market universe.
+    // Keep the original ordering as the deterministic tie-breaker.
     const all = [...results1s, ...resultsPlain];
+    const best = all.reduce<ScanResult | null>(
+        (current, result) => !current || result.score > current.score ? result : current,
+        null
+    );
+    if (!best) throw new Error('[AiScanner] No market results were available');
+    const used1s = best.is1s;
 
     return { best, all, used1s };
 }
