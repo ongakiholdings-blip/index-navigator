@@ -125,14 +125,15 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        margin-inline-start: 1rem;
+        margin-inline-start: 0;
+        min-width: 0;
     }
 
     &__account-type-header {
         display: flex;
         align-items: center;
         gap: 0.4rem;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.1rem;
     }
 
     &__account-type {
@@ -141,12 +142,68 @@
         line-height: 1;
         margin: 0;
         font-size: var(--text-size-xxs);
+
+        &--visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    }
+
+    &__loginid {
+        overflow: hidden;
+        color: #9eb2d0;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__avatar {
+        display: grid;
+        width: 2.8rem;
+        height: 2.8rem;
+        flex: 0 0 2.8rem;
+        place-items: center;
+        border: 1px solid rgb(103 166 255 / 38%);
+        border-radius: 50%;
+        background: linear-gradient(145deg, #183965, #0a1d38);
+        color: #75b5ff;
+        font-size: 1.5rem;
+        font-weight: 900;
+        box-shadow: inset 0 0 0.7rem rgb(59 130 246 / 18%);
+    }
+
+    &__selected {
+        position: absolute;
+        top: -0.45rem;
+        right: -0.35rem;
+        display: grid;
+        width: 1.8rem;
+        height: 1.8rem;
+        place-items: center;
+        border: 2px solid #111b35;
+        border-radius: 50%;
+        background: #5148ef;
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 900;
+        line-height: 1;
     }
 
     &--is-virtual {
         .acc-info__account-type {
             color: $color-yellow;
         }
+
     }
 
     &__balance-section {
@@ -290,6 +347,60 @@
         &-balance {
             color: var(--text-general);
             margin-right: 0;
+        }
+    }
+}
+
+.account-info {
+    .acc-info {
+        position: relative;
+        gap: 0.8rem;
+        min-height: 4rem;
+        height: auto;
+        padding: 0.45rem 1.8rem 0.45rem 0.65rem;
+        border: 1px solid rgb(120 149 255 / 65%);
+        border-radius: 999px;
+        background: linear-gradient(145deg, rgb(12 21 45 / 98%), rgb(5 13 31 / 98%));
+        box-shadow: 0 0 0.8rem rgb(99 102 241 / 25%), inset 0 1px rgb(255 255 255 / 8%);
+        color: #f7f9ff;
+        width: auto;
+        max-width: min(30rem, 34vw);
+        justify-content: flex-start;
+
+        &__balance {
+            color: #f7f9ff;
+            font-size: 1.35rem;
+            font-weight: 800;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+
+        &__select-arrow {
+            margin-inline-start: auto;
+            flex: 0 0 auto;
+
+            svg path {
+                stroke: #c3d2ff;
+            }
+        }
+    }
+
+    @include mobile-or-tablet-screen {
+        .acc-info {
+            min-height: 3.6rem;
+            max-width: 48vw;
+            gap: 0.5rem;
+            padding-inline: 0.5rem 1.4rem;
+
+            &__avatar {
+                width: 2.4rem;
+                height: 2.4rem;
+                flex-basis: 2.4rem;
+            }
+
+            &__balance {
+                font-size: 1.15rem;
+            }
         }
     }
 }

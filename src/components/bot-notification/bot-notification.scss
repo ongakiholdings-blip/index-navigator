@@ -5,14 +5,16 @@
         background: var(--icon-black-plus);
         color: var(--general-main-1);
         min-height: 4.8rem;
-        height: 4.8rem;
+        height: auto;
         width: fit-content;
+        max-width: min(42rem, calc(100vw - 3rem));
         text-align: start;
         padding: 0.8rem;
         padding-inline-start: 1.6rem;
         border-radius: 0.8rem;
         font-size: 1.4rem;
         font-family: inherit;
+        white-space: normal;
 
         @include mobile-or-tablet-screen {
             height: 4.4rem;
@@ -38,7 +40,8 @@
 
         &-body {
             padding: 0;
-            height: 100%;
+            height: auto;
+            min-width: 0;
         }
     }
 
@@ -67,9 +70,16 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+    width: 100%;
+    min-width: 0;
 
     &__message {
         flex: 1;
+        min-width: 0;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        text-align: start;
     }
 
     &__action,
@@ -98,6 +108,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex: 0 0 auto;
     }
 
     @include mobile-or-tablet-screen {

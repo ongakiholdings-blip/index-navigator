@@ -136,9 +136,12 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
                     }}
                 >
                     <span className='acc-info__id' aria-hidden='true'></span>
+                    <span className='acc-info__avatar' aria-hidden='true'>
+                        {isVirtual && !isActiveAccountMarketingCR ? 'D' : 'R'}
+                    </span>
                     <div className='acc-info__content'>
                         <div className='acc-info__account-type-header'>
-                            <Text as='p' size='xs' className='acc-info__account-type'>
+                            <Text as='p' size='xs' className='acc-info__account-type acc-info__account-type--visually-hidden'>
                                 {isActiveAccountMarketingCR ? (
                                     <Localize i18n_default_text='Real account' />
                                 ) : isVirtual ? (
@@ -147,6 +150,7 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
                                     <Localize i18n_default_text='Real account' />
                                 )}
                             </Text>
+                            <span className='acc-info__loginid'>{activeLoginid || activeAccount.loginid}</span>
                             {showChevron && (
                                 <span
                                     className={classNames('acc-info__select-arrow', {
@@ -182,6 +186,7 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
                             </div>
                         )}
                     </div>
+                    <span className='acc-info__selected' aria-hidden='true'>✓</span>
                 </div>
             </AccountInfoWrapper>
 

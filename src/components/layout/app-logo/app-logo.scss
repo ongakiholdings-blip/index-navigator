@@ -145,20 +145,22 @@
         justify-content: center;
         min-width: 0;
         margin-left: 1.2rem;
+        overflow: visible;
     }
 
     &__logo-powered-by {
-        margin-top: 0.05rem;
-        color: var(--text-general, #64748b);
-        font-size: 0.62rem;
+        display: block;
+        margin-top: 0.15rem;
+        color: #c4e8ff;
+        font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: 0.08em;
-        line-height: 1;
+        line-height: 1.15;
         text-transform: lowercase;
         white-space: nowrap;
 
         strong {
-            color: #ef4444;
+            color: #ff6868;
             font-weight: 900;
         }
     }
@@ -170,7 +172,18 @@
         }
 
         .app-header__logo-copy {
-            display: none;
+            display: flex;
+            max-width: min(44vw, 18rem);
+            margin-left: 0.65rem;
+        }
+
+        .app-header__logo-text {
+            max-width: 100%;
+            font-size: 1.35rem;
+        }
+
+        .app-header__logo-powered-by {
+            font-size: 0.58rem;
         }
     }
 }
