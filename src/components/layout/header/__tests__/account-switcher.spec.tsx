@@ -109,7 +109,8 @@ describe('AccountSwitcher', () => {
     it('renders active account type and balance', () => {
         render(<AccountSwitcher activeAccount={mockActiveAccount} />);
         expect(screen.getByText('Real account')).toBeInTheDocument();
-        expect(screen.getByText('CR123')).toBeInTheDocument();
+        expect(screen.queryByText('CR123')).not.toBeInTheDocument();
+        expect(screen.queryByText('✓')).not.toBeInTheDocument();
         expect(screen.getByText('R')).toBeInTheDocument();
         expect(screen.getByTestId('dt_balance')).toHaveTextContent('100.00 USD');
     });

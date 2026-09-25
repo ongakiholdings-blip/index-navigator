@@ -150,7 +150,6 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
                                     <Localize i18n_default_text='Real account' />
                                 )}
                             </Text>
-                            <span className='acc-info__loginid'>{activeLoginid || activeAccount.loginid}</span>
                             {showChevron && (
                                 <span
                                     className={classNames('acc-info__select-arrow', {
@@ -186,7 +185,6 @@ const AccountSwitcher = observer(({ activeAccount }: TAccountSwitcher) => {
                             </div>
                         )}
                     </div>
-                    <span className='acc-info__selected' aria-hidden='true'>✓</span>
                 </div>
             </AccountInfoWrapper>
 
