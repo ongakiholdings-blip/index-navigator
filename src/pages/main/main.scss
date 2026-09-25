@@ -48,6 +48,12 @@
     }
 }
 
+html {
+    @include mobile-or-tablet-screen {
+        overflow: clip;
+    }
+}
+
 .run-panel {
     // fix for the RTL issue on tab active line
     .dc-tabs__active-line {
@@ -83,8 +89,12 @@
     padding: 1.6rem;
 
     @include mobile-or-tablet-screen {
-        min-height: calc(100vh - 6rem);
-        height: calc(100vh - 6rem);
+        min-height: calc(
+            100dvh + var(--visual-viewport-offset-top, 0px) - 15.4rem
+        );
+        height: calc(
+            100dvh + var(--visual-viewport-offset-top, 0px) - 15.4rem
+        );
         padding: 0;
     }
 

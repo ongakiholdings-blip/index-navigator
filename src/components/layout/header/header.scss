@@ -124,6 +124,54 @@
     }
 }
 
+.app-header--mobile {
+    @include mobile-or-tablet-screen {
+        overflow: hidden;
+
+        > .deriv-wrapper__left {
+            flex: 0 0 40%;
+            min-width: 0;
+            width: 40%;
+        }
+
+        > .deriv-wrapper__right {
+            flex: 0 0 60%;
+            min-width: 0;
+            width: 60%;
+        }
+
+        .app-header__logo {
+            flex: 1 1 auto;
+            min-width: 0;
+            padding-inline: 0.4rem;
+        }
+
+        .app-header__logo-copy {
+            max-width: 18vw;
+            margin-left: 0.4rem;
+        }
+
+        .auth-actions {
+            justify-content: flex-end;
+            gap: 0;
+            min-width: 0;
+            padding-block: 0;
+
+            button {
+                min-width: 0;
+                margin-inline-end: 0;
+                padding-inline: 0.2rem;
+                font-size: 0.95rem;
+            }
+        }
+
+        .auth-actions__api-token-btn {
+            padding-inline: 0.2rem;
+            font-size: 0.85rem;
+        }
+    }
+}
+
 .account-switcher {
     &__item {
         .deriv-account-switcher-item {

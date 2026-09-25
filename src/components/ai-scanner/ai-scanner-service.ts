@@ -1,15 +1,13 @@
 /**
  * AI Scanner Service
  *
- * Connects to the Deriv WebSocket API, fetches tick history for each
- * synthetic-digits market, and scores every valid strategy in the selected
- * contract family.
+ * Uses the app's shared Deriv WebSocket API to fetch tick history for each
+ * synthetic-digits market and score strategies in the selected contract family.
  *
  * Every requested standard and 1-second volatility market is evaluated. The
  * highest-scoring market is returned as the single recommendation.
  */
-import DerivAPIBasic from '@deriv/deriv-api/dist/DerivAPIBasic';
-import { getSocketURL } from '@/components/shared';
+import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -210,35 +208,6 @@ function scoreMarketFamily(digits: number[], prices: number[], mode: ScanMode): 
     return candidates.reduce((best, candidate) => candidate.score > best.score ? candidate : best);
 }
 
-// ─── WebSocket connection helper ──────────────────────────────────────────────
-
-function openConnection(wsURL: string, timeoutMs = 15_000): Promise<{
-    api: InstanceType<typeof DerivAPIBasic>;
-    ws: WebSocket;
-}> {
-    return new Promise((resolve, reject) => {
-        let settled = false;
-
-        const ws  = new WebSocket(wsURL);
-        const api = new DerivAPIBasic({ connection: ws });
-
-        const timer = setTimeout(() => {
-            if (!settled) {
-                settled = true;
-                ws.close();
-                reject(new Error('[AiScanner] WebSocket connection timed out'));
-            }
-        }, timeoutMs);
-
-        ws.addEventListener('open', () => {
-            if (!settled) { settled = true; clearTimeout(timer); resolve({ api, ws }); }
-        });
-        ws.addEventListener('error', (err) => {
-            if (!settled) { settled = true; clearTimeout(timer); reject(err); }
-        });
-    });
-}
-
 // ─── main scan ────────────────────────────────────────────────────────────────
 
 /**
@@ -256,51 +225,54 @@ export async function scanMarkets(
     onProgress: (p: ScanProgress) => void,
     signal?: AbortSignal
 ): Promise<UnifiedScanOutput> {
-    const wsURL = await getSocketURL();
-    const { api, ws } = await openConnection(wsURL);
+    const api = api_base.api;
+    if (!api) {
+        throw new Error('[AiScanner] The shared Deriv WebSocket is not connected');
+    }
 
     const results1s:    ScanResult[] = [];
     const resultsPlain: ScanResult[] = [];
 
-    try {
-        for (let i = 0; i < SCAN_SYMBOLS.length; i++) {
-            if (signal?.aborted) break;
+    for (let i = 0; i < SCAN_SYMBOLS.length; i++) {
+        if (signal?.aborted) break;
 
-            const { symbol, name, is1s } = SCAN_SYMBOLS[i];
-            onProgress({ symbol, index: i, total: SCAN_SYMBOLS.length });
+        const { symbol, name, is1s } = SCAN_SYMBOLS[i];
+        onProgress({ symbol, index: i, total: SCAN_SYMBOLS.length });
 
-            try {
-                const response = await (api as any).send({
-                    ticks_history: symbol,
-                    count: Math.min(tickCount, 5000),
-                    end: 'latest',
-                    style: 'ticks',
-                });
+        try {
+            const response = await (api as any).send({
+                ticks_history: symbol,
+                count: Math.min(tickCount, 5000),
+                end: 'latest',
+                style: 'ticks',
+            });
 
-                const prices: number[] = response?.history?.prices ?? [];
-                const digits      = prices.map(p => getLastDigit(p));
-                const digitCounts = buildDigitCounts(digits);
-                const numericPrices = prices.map(Number).filter(Number.isFinite);
-                const scored = scoreMarketFamily(digits, numericPrices, mode);
-
-                const result: ScanResult = {
-                    symbol, name, is1s, digitCounts,
-                    score:         scored.score,
-                    tradeType:     scored.tradeType,
-                    percentage:    scored.percentage,
-                    contractGroup: scored.contractGroup,
-                    entryPoint:    scored.entryPoint,
-                };
-
-                if (is1s) results1s.push(result);
-                else      resultsPlain.push(result);
-            } catch (err) {
-                // eslint-disable-next-line no-console
-                console.warn(`[AiScanner] Failed to fetch ${symbol}:`, err);
+            const responseData = response?.data ?? response;
+            if (responseData?.error) {
+                throw new Error(responseData.error.message ?? `Deriv rejected history for ${symbol}`);
             }
+            const prices: number[] = responseData?.history?.prices ?? [];
+            if (!prices.length) throw new Error(`No tick history returned for ${symbol}`);
+            const digits      = prices.map(p => getLastDigit(p));
+            const digitCounts = buildDigitCounts(digits);
+            const numericPrices = prices.map(Number).filter(Number.isFinite);
+            const scored = scoreMarketFamily(digits, numericPrices, mode);
+
+            const result: ScanResult = {
+                symbol, name, is1s, digitCounts,
+                score:         scored.score,
+                tradeType:     scored.tradeType,
+                percentage:    scored.percentage,
+                contractGroup: scored.contractGroup,
+                entryPoint:    scored.entryPoint,
+            };
+
+            if (is1s) results1s.push(result);
+            else      resultsPlain.push(result);
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn(`[AiScanner] Failed to fetch ${symbol}:`, err);
         }
-    } finally {
-        try { ws.close(); } catch { /* ignore */ }
     }
 
     // Sort each group by score descending

@@ -29,6 +29,28 @@
         text-shadow: 0 0 0.7rem rgb(101 230 187 / 45%);
     }
 
+    &__connection {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        margin: -0.55rem 0 1rem;
+        color: #f5bd59;
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+
+        span {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 0.5rem currentColor;
+        }
+
+        &.is-connected { color: #50e49b; }
+    }
+
     h1 {
         margin: 0.35rem 0 1rem;
         color: #35e58c;
@@ -175,6 +197,7 @@
         letter-spacing: 0.05em;
         box-shadow: 0 0 1rem rgb(34 211 238 / 35%);
         &:hover { filter: brightness(1.12); }
+        &:disabled { cursor: not-allowed; filter: grayscale(0.5); opacity: 0.55; }
     }
 
     &__bot-actions {

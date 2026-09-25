@@ -23,8 +23,8 @@
 
     @include mobile-or-tablet-screen {
         width: 100vw !important;
-        height: calc(100% - 10.1rem) !important;
-        top: calc(100% - 9.8rem) !important;
+        height: 3.6rem !important;
+        top: calc(100dvh + var(--visual-viewport-offset-top, 0px) - 9.8rem) !important;
     }
 
     &__container {
@@ -120,6 +120,7 @@
 
     &--open {
         @include mobile-or-tablet-screen {
+            height: calc(100dvh - 10.1rem) !important;
             transform: translateY(calc(-100% + 3.6rem));
         }
     }

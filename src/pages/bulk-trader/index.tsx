@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { useStore } from '@/hooks/useStore';
+import { useApiBase } from '@/hooks/useApiBase';
+import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import { contract_stages } from '@/constants/contract-stage';
 import './bulk-trader.scss';
 
@@ -75,6 +77,7 @@ const BulkTrader = () => {
     const contractSubscriptions = useRef<Array<{ unsubscribe: () => void }>>([]);
     const autoCancelRef = useRef(false);
     const { client, transactions, run_panel, summary_card, ui } = useStore();
+    const { connectionStatus } = useApiBase();
 
     useEffect(() => {
         let messageSubscription: { unsubscribe: () => void } | undefined;
@@ -137,6 +140,15 @@ const BulkTrader = () => {
                 }
             } catch (error) {
                 console.error('Bulk Trader tick subscription failed:', error);
+                messageSubscription?.unsubscribe();
+                messageSubscription = undefined;
+                const failedSubscriptionId = subscriptionId.current;
+                subscriptionId.current = null;
+                if (failedSubscriptionId && api_base.api) {
+                    void (api_base.api as any).send({ forget: failedSubscriptionId }).catch((cleanupError: unknown) => {
+                        console.error('Bulk Trader failed tick subscription cleanup:', cleanupError);
+                    });
+                }
                 if (!cancelled) retryTimer = setTimeout(() => void startSubscription(), 1000);
             }
         };
@@ -366,6 +378,10 @@ const BulkTrader = () => {
     return (
         <section className='bulk-trader' aria-label='Bulk Trader'>
             <div className='bulk-trader__top-grid'>
+                <p className={`bulk-trader__connection${connectionStatus === CONNECTION_STATUS.OPENED ? ' is-connected' : ''}`}>
+                    <span />
+                    {connectionStatus === CONNECTION_STATUS.OPENED ? 'DERIV WEBSOCKET CONNECTED' : 'CONNECTING TO DERIV'}
+                </p>
                 <label className='bulk-trader__field'>
                     <span>Market</span>
                     <select value={market} onChange={event => setMarket(event.target.value)}>
@@ -450,16 +466,16 @@ const BulkTrader = () => {
                         <label className='bulk-trader__field'><span>Take profit</span><input min='0.01' step='0.01' type='number' value={autoTakeProfit} onChange={event => setAutoTakeProfit(event.target.value)} /></label>
                     </div>
                     <div className='bulk-trader__auto-widget-actions'>
-                        <button disabled={isAutoTrading} onClick={() => void startAutoTrader()} type='button'>Start Auto Trader</button>
+                        <button disabled={isAutoTrading || connectionStatus !== CONNECTION_STATUS.OPENED} onClick={() => void startAutoTrader()} type='button'>Start Auto Trader</button>
                         <button disabled={!isAutoTrading} onClick={stopAutoTrader} type='button'>Stop</button>
                     </div>
                 </div>
             )}
             <div className='bulk-trader__actions'>
-                <button className='bulk-trader__action bulk-trader__action--over' disabled={isTrading} onClick={() => void placeTrades('primary')} type='button'>
+                <button className='bulk-trader__action bulk-trader__action--over' disabled={isTrading || connectionStatus !== CONNECTION_STATUS.OPENED} onClick={() => void placeTrades('primary')} type='button'>
                     <strong>{tradeLabels.primary}</strong><small>59.10%</small>
                 </button>
-                <button className='bulk-trader__action bulk-trader__action--under' disabled={isTrading} onClick={() => void placeTrades('secondary')} type='button'>
+                <button className='bulk-trader__action bulk-trader__action--under' disabled={isTrading || connectionStatus !== CONNECTION_STATUS.OPENED} onClick={() => void placeTrades('secondary')} type='button'>
                     <strong>{tradeLabels.secondary}</strong><small>32.10%</small>
                 </button>
             </div>

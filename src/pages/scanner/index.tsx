@@ -3,6 +3,9 @@ import { DBOT_TABS } from '@/constants/bot-contents';
 import { load } from '@/external/bot-skeleton';
 import { save_types } from '@/external/bot-skeleton/constants/save-type';
 import { useStore } from '@/hooks/useStore';
+import { useApiBase } from '@/hooks/useApiBase';
+import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
+import { api_base } from '@/external/bot-skeleton/services/api/api-base';
 import { scanMarkets, ScanMode, ScanProgress, UnifiedScanOutput } from '@/components/ai-scanner/ai-scanner-service';
 import './scanner.scss';
 
@@ -16,6 +19,7 @@ const replaceNavigatorNumber = (xml: string, varId: string, value: number) => {
 
 const Scanner = () => {
     const store = useStore();
+    const { connectionStatus } = useApiBase();
     const [scanMode, setScanMode] = useState<ScanMode>('overunder');
     const [stake, setStake] = useState('0.5');
     const [martingale, setMartingale] = useState('2.5');
@@ -145,6 +149,10 @@ const Scanner = () => {
             setStatus('Scan stopped by user.');
             return;
         }
+        if (connectionStatus !== CONNECTION_STATUS.OPENED || !api_base.api) {
+            setStatus('The shared Deriv WebSocket is disconnected. Wait for it to reconnect before scanning.');
+            return;
+        }
 
         const controller = new AbortController();
         setAbortController(controller);
@@ -182,6 +190,10 @@ const Scanner = () => {
             <div className='scanner-page__shell'>
                 <p className='scanner-page__eyebrow'>NAVIGATOR AI SCANNER</p>
                 <h1>Analysis Dashboard - Digit Scanner</h1>
+                <p className={`scanner-page__connection${connectionStatus === CONNECTION_STATUS.OPENED ? ' is-connected' : ''}`}>
+                    <span />
+                    {connectionStatus === CONNECTION_STATUS.OPENED ? 'DERIV WEBSOCKET CONNECTED' : 'CONNECTING TO DERIV'}
+                </p>
 
                 <div className='scanner-page__controls'>
                     <label>
@@ -252,7 +264,12 @@ const Scanner = () => {
                     <b>{isScanning ? 'SCANNING' : 'STANDBY'}</b> {status}
                 </div>
 
-                <button className='scanner-page__scan-button' onClick={() => void handleScan()} type='button'>
+                <button
+                    className='scanner-page__scan-button'
+                    disabled={!isScanning && connectionStatus !== CONNECTION_STATUS.OPENED}
+                    onClick={() => void handleScan()}
+                    type='button'
+                >
                     {isScanning ? 'STOP SCAN' : `SCAN FOR BEST MARKET — ${strategyLabel.toUpperCase()}`}
                 </button>
                 <div className='scanner-page__bot-actions'>

@@ -276,6 +276,30 @@ const RunPanel = observer(() => {
     }, [onMount, onUnmount]);
 
     React.useEffect(() => {
+        if (isDesktop || !window.visualViewport) return;
+
+        const viewport = window.visualViewport;
+        const updateViewportInsets = () => {
+            const bottomInset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+            document.documentElement.style.setProperty('--visual-viewport-offset-top', `${viewport.offsetTop}px`);
+            document.documentElement.style.setProperty('--visual-viewport-bottom-inset', `${bottomInset}px`);
+        };
+
+        updateViewportInsets();
+        viewport.addEventListener('resize', updateViewportInsets);
+        viewport.addEventListener('scroll', updateViewportInsets);
+        window.addEventListener('resize', updateViewportInsets);
+
+        return () => {
+            viewport.removeEventListener('resize', updateViewportInsets);
+            viewport.removeEventListener('scroll', updateViewportInsets);
+            window.removeEventListener('resize', updateViewportInsets);
+            document.documentElement.style.removeProperty('--visual-viewport-offset-top');
+            document.documentElement.style.removeProperty('--visual-viewport-bottom-inset');
+        };
+    }, [isDesktop]);
+
+    React.useEffect(() => {
         if (!isDesktop) {
             toggleDrawer(false);
         }

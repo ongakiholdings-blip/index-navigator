@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '@/hooks/useStore';
+import { useApiBase } from '@/hooks/useApiBase';
+import { CONNECTION_STATUS } from '@/external/bot-skeleton/services/api/observables/connection-status-stream';
 import { DBOT_TABS } from '@/constants/bot-contents';
 import { load } from '@/external/bot-skeleton';
 import { save_types } from '@/external/bot-skeleton/constants/save-type';
@@ -69,6 +71,7 @@ function injectEvenOddParams(xml: string, opts: InjectOpts): string {
 
 const AiScanner = () => {
     const store = useStore();
+    const { connectionStatus } = useApiBase();
 
     // ── drag state ───────────────────────────────────────────────────────────
     const [pos, setPos] = useState({ right: 24, bottom: 120 });
@@ -179,6 +182,10 @@ const AiScanner = () => {
             abortRef.current?.abort();
             setScanState('idle');
             setStatusMsg(statusFor('idle', null, null));
+            return;
+        }
+        if (connectionStatus !== CONNECTION_STATUS.OPENED) {
+            setStatusMsg('Waiting for the shared Deriv WebSocket to reconnect.');
             return;
         }
         const ctrl = new AbortController();
@@ -328,6 +335,9 @@ const AiScanner = () => {
                     {/* ── Header ───────────────────────────────────────────── */}
                     <div className='ai-scanner-modal__header'>
                         <h3>AI Entry Scanner</h3>
+                        <span className={`ai-scanner-modal__connection${connectionStatus === CONNECTION_STATUS.OPENED ? ' is-connected' : ''}`}>
+                            {connectionStatus === CONNECTION_STATUS.OPENED ? 'LIVE' : 'CONNECTING'}
+                        </span>
                         <button className='ai-scanner-modal__close' onClick={handleClose} aria-label='Close'>✕</button>
                     </div>
 
@@ -484,6 +494,7 @@ const AiScanner = () => {
                             <button
                                 className='ai-scanner-modal__btn ai-scanner-modal__btn--primary ai-scanner-modal__btn--scan'
                                 onClick={handleScan}
+                                disabled={scanState !== 'scanning' && connectionStatus !== CONNECTION_STATUS.OPENED}
                             >
                                 {scanState === 'scanning' ? 'Stop Scan' : 'Scan Markets'}
                             </button>
