@@ -18,7 +18,6 @@ const Scanner = () => {
     const store = useStore();
     const [scanMode, setScanMode] = useState<ScanMode>('overunder');
     const [stake, setStake] = useState('0.5');
-    const [bulkTrades, setBulkTrades] = useState('1');
     const [martingale, setMartingale] = useState('2.5');
     const [takeProfit, setTakeProfit] = useState('5');
     const [stopLoss, setStopLoss] = useState('8');
@@ -198,10 +197,6 @@ const Scanner = () => {
                         <span>Stake</span>
                         <input min='0.35' step='0.01' type='number' value={stake} onChange={event => setStake(event.target.value)} disabled={isScanning} />
                     </label>
-                    <label>
-                        <span>No. of bulk trades</span>
-                        <input min='1' type='number' value={bulkTrades} onChange={event => setBulkTrades(event.target.value)} disabled={isScanning} />
-                    </label>
                     <label><span>Martingale</span><input min='1' step='0.1' type='number' value={martingale} onChange={event => setMartingale(event.target.value)} disabled={isScanning} /></label>
                     <label><span>Take profit</span><input min='0.01' step='0.01' type='number' value={takeProfit} onChange={event => setTakeProfit(event.target.value)} disabled={isScanning} /></label>
                     <label><span>Stop loss</span><input min='0.01' step='0.01' type='number' value={stopLoss} onChange={event => setStopLoss(event.target.value)} disabled={isScanning} /></label>
@@ -265,7 +260,7 @@ const Scanner = () => {
                     <button disabled={!output || isScanning} onClick={() => void handleLoadBot(true)} type='button'>LOAD &amp; RUN</button>
                 </div>
 
-                <p className='scanner-page__meta'>Stake {stake} · Bulk purchase {bulkTrades} · Analysis window 3,000 ticks</p>
+                <p className='scanner-page__meta'>Stake {stake} · Analysis window 3,000 ticks</p>
             </div>
         </section>
     );

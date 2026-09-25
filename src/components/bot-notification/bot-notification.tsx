@@ -10,19 +10,34 @@ export const NotificationContent: React.FC<TNotificationContent> = ({ message, p
             }
         };
 
+        const autoDismissTimer = window.setTimeout(() => {
+            closeToast?.();
+        }, 4000);
+
         document.addEventListener('visibilitychange', handleToastVisibility);
 
         return () => {
+            window.clearTimeout(autoDismissTimer);
             document.removeEventListener('visibilitychange', handleToastVisibility);
         };
-    }, []);
+    }, [closeToast]);
 
     return (
         <div className='notification-content' data-testid='dt_bot_notification'>
-            <div>{message}</div>
+            <div className='notification-content__message'>{message}</div>
             {primary_action && (
-                <button onClick={() => primary_action.onClick(closeToast)}>{primary_action.label}</button>
+                <button type='button' className='notification-content__action' onClick={() => primary_action.onClick(closeToast)}>
+                    {primary_action.label}
+                </button>
             )}
+            <button
+                type='button'
+                className='notification-content__close'
+                aria-label='Dismiss notification'
+                onClick={closeToast}
+            >
+                ×
+            </button>
         </div>
     );
 };
@@ -66,10 +81,16 @@ export const sessionCompleteNotification = ({
     return toast(
         ({ closeToast }) => (
             <div className='session-complete-notification'>
+                <button
+                    className='session-complete-notification__close'
+                    onClick={closeToast}
+                    type='button'
+                    aria-label='Dismiss notification'
+                >
+                    ×
+                </button>
                 <span className='session-complete-notification__eyebrow'>BULK SESSION COMPLETE</span>
-                <strong className='session-complete-notification__title'>
-                    {reason === 'take-profit' ? 'Take Profit Reached' : 'Stop Loss Reached'}
-                </strong>
+                <strong className='session-complete-notification__title'>Total Profit</strong>
                 <strong className={`session-complete-notification__profit${profit < 0 ? ' session-complete-notification__profit--negative' : ''}`}>
                     {profit >= 0 ? '+' : ''}{profit.toFixed(2)} USD
                 </strong>
@@ -86,9 +107,11 @@ export const sessionCompleteNotification = ({
         {
             type: profit >= 0 ? 'success' : 'error',
             position: 'top-center',
-            autoClose: false,
+            autoClose: 4000,
             closeButton: false,
             closeOnClick: false,
+            pauseOnHover: false,
+            pauseOnFocusLoss: false,
             className: 'session-complete-toast',
         }
     );

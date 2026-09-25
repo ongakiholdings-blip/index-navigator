@@ -5,7 +5,7 @@
  * synthetic-digits market, and scores every valid strategy in the selected
  * contract family.
  *
- * Every requested standard, 1-second, and Jump market is evaluated. The
+ * Every requested standard and 1-second volatility market is evaluated. The
  * highest-scoring market is returned as the single recommendation.
  */
 import DerivAPIBasic from '@deriv/deriv-api/dist/DerivAPIBasic';
@@ -33,13 +33,8 @@ export const SCAN_SYMBOLS_PLAIN = [
     { symbol: 'R_10',    name: 'Volatility 10',       is1s: false },
     { symbol: 'R_25',    name: 'Volatility 25',       is1s: false },
     { symbol: 'R_50',    name: 'Volatility 50',       is1s: false },
-    { symbol: 'R_75',    name: 'Volatility 75',       is1s: false },
+    { symbol: 'R_75',    name: 'Volatility 75',      is1s: false },
     { symbol: 'R_100',   name: 'Volatility 100',      is1s: false },
-    { symbol: 'JD10',    name: 'Jump 10',              is1s: false },
-    { symbol: 'JD25',    name: 'Jump 25',              is1s: false },
-    { symbol: 'JD50',    name: 'Jump 50',              is1s: false },
-    { symbol: 'JD75',    name: 'Jump 75',              is1s: false },
-    { symbol: 'JD100',   name: 'Jump 100',             is1s: false },
 ];
 
 /** All symbols: 1s first, then plain — preserves priority ordering. */
@@ -147,7 +142,7 @@ function scoreOverUnder(
     const underRate = digits.filter(d => d < underThreshold).length / total;
     const overEdge  = overRate - ((9 - overThreshold) / 10);
     const underEdge = underRate - (underThreshold / 10);
-    if (overEdge >= underEdge) {
+    if (Math.abs(overEdge) >= Math.abs(underEdge)) {
         return {
             score:      Math.abs(overEdge),
             tradeType:  `Over ${overThreshold}`,

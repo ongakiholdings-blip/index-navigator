@@ -52,11 +52,6 @@ export const MARKETS: Market[] = [
     { symbol: 'R_50',    label: 'Volatility 50 Index',        short: 'V50',       code: '50'        },
     { symbol: 'R_75',    label: 'Volatility 75 Index',        short: 'V75',       code: '75'        },
     { symbol: 'R_100',   label: 'Volatility 100 Index',       short: 'V100',      code: '100'       },
-    { symbol: 'JD10',    label: 'Jump 10 Index',              short: 'JD10',      code: 'JD10'      },
-    { symbol: 'JD25',    label: 'Jump 25 Index',              short: 'JD25',      code: 'JD25'      },
-    { symbol: 'JD50',    label: 'Jump 50 Index',              short: 'JD50',      code: 'JD50'      },
-    { symbol: 'JD75',    label: 'Jump 75 Index',              short: 'JD75',      code: 'JD75'      },
-    { symbol: 'JD100',   label: 'Jump 100 Index',             short: 'JD100',     code: 'JD100'     },
 ];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

@@ -114,6 +114,32 @@ const AiScanner = () => {
     const [stopLoss,   setStopLoss]   = useState(10);
 
     const abortRef = useRef<AbortController | null>(null);
+    const scanAlarmRef = useRef<HTMLAudioElement | null>(null);
+
+    const stopScanAlarm = useCallback(() => {
+        const alarm = scanAlarmRef.current;
+        if (!alarm) return;
+        alarm.pause();
+        alarm.currentTime = 0;
+        scanAlarmRef.current = null;
+    }, []);
+
+    const startScanAlarm = useCallback(() => {
+        stopScanAlarm();
+        const alarm = document.getElementById('ai-scan-alert') as HTMLAudioElement | null;
+        if (!alarm) {
+            console.warn('[AiScanner] Scan alarm audio element is unavailable.');
+            return;
+        }
+        alarm.loop = true;
+        alarm.currentTime = 0;
+        scanAlarmRef.current = alarm;
+        void alarm.play().catch(error => {
+            console.warn('[AiScanner] Scan alarm could not start:', error);
+        });
+    }, [stopScanAlarm]);
+
+    useEffect(() => stopScanAlarm, [stopScanAlarm]);
 
     // Reset results when mode changes so stale data is never shown
     useEffect(() => {
@@ -157,6 +183,7 @@ const AiScanner = () => {
         }
         const ctrl = new AbortController();
         abortRef.current = ctrl;
+        startScanAlarm();
         setScanState('scanning');
         setOutput(null);
         setProgress(null);
@@ -174,6 +201,8 @@ const AiScanner = () => {
             if (ctrl.signal.aborted) return;
             setScanState('error');
             setStatusMsg(statusFor('error', null, null));
+        } finally {
+            stopScanAlarm();
         }
     };
 
