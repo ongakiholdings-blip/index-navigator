@@ -187,7 +187,7 @@ const AppHeader = observer(() => {
                 }
 
                 return (
-                    <div className='auth-actions'>
+                    <div className='auth-actions auth-actions--unauthenticated'>
                         <button
                             className='auth-actions__api-token-btn'
                             onClick={() => setShowApiTokenModal(true)}

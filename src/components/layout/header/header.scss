@@ -126,7 +126,9 @@
 
 .app-header--mobile {
     @include mobile-or-tablet-screen {
-        overflow: hidden;
+        overflow-x: clip;
+        overflow-y: visible;
+        z-index: 10;
 
         > .deriv-wrapper__left {
             flex: 0 0 40%;
@@ -163,6 +165,10 @@
                 padding-inline: 0.2rem;
                 font-size: 0.95rem;
             }
+        }
+
+        .auth-actions--unauthenticated {
+            gap: 0.6rem;
         }
 
         .auth-actions__api-token-btn {
@@ -457,6 +463,14 @@ body .derivs-secondary-tabs {
     flex-wrap: nowrap;
     padding-block: 8px;
     align-items: center;
+
+    &.auth-actions--unauthenticated {
+        gap: 0.8rem;
+
+        button {
+            margin-inline-end: 0;
+        }
+    }
 
     button {
         font-weight: 400;
