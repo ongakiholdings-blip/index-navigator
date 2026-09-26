@@ -172,18 +172,7 @@
         }
 
         .app-header__logo-copy {
-            display: flex;
-            max-width: min(44vw, 18rem);
-            margin-left: 0.65rem;
-        }
-
-        .app-header__logo-text {
-            max-width: 100%;
-            font-size: 1.35rem;
-        }
-
-        .app-header__logo-powered-by {
-            font-size: 0.58rem;
+            display: none;
         }
     }
 }

@@ -6,8 +6,12 @@ type TToggleButton = {
 };
 
 const ToggleButton = ({ onClick }: TToggleButton) => (
-    <button onClick={onClick}>
-        <LegacyMenuHamburger1pxIcon iconSize='xs' fill='var(--text-general)' />
+    <button type='button' aria-label='Open settings' onClick={onClick}>
+        <LegacyMenuHamburger1pxIcon
+            className='mobile-menu__toggle-icon'
+            iconSize='sm'
+            fill='currentColor'
+        />
     </button>
 );
 

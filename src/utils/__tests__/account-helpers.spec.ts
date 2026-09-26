@@ -141,6 +141,7 @@ describe('account-helpers', () => {
         it('should return demo account label for demo loginid', () => {
             expect(getAccountTypeLabel('VRTC12345')).toBe('demo account');
             expect(getAccountTypeLabel('CR12345')).toBe('real account');
+            expect(getAccountTypeLabel('ROT91867724')).toBe('real account');
         });
     });
 
